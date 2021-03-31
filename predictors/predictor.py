@@ -82,21 +82,22 @@ def print_pred(answers, outfile, whiskers, quartiles, clos):
 	fd.close()
 	return accuracy
 
-def predict(k = 8, clos = [1.2] , tool = 'pqos', feature = 'sens', q = ''):
+def predict(fold = 8, clos = [1.2] , tool = 'pqos', feature = 'sens', q = ''):
 	print "Feature: " + feature + ', CLoS: ' + ','.join([str(x) for x in clos]) + ', tool: ' + tool 
 	measures = perf_files(tool)
-	(classes, whiskers, quartiles) = make_grid(feature, clos, q)
-	chunksize = len(measures.keys()) / k
+	chunksize = len(measures.keys()) / fold
 	benches = [x for x in measures.keys() if x != 'Title']
 	random.shuffle(benches)
 	chunks = [benches[i:i + chunksize] for i in range(0, len(benches), chunksize)]
+	(classes, whiskers, quartiles) = make_grid(feature, clos, q)
 
 	answers = dict()
 
 	for test_set in chunks:
 		train_chunks = [x for x in chunks if x != test_set]
 		train_set = [element for lst in train_chunks for element in lst]
-		csv_writer(measures, classes, train_set, 'train')
+		(train_classes, _, _) = make_partial_grid(train_set, feature, clos, q)
+		csv_writer(measures, train_classes, train_set, 'train')
 		csv_writer(measures, classes, test_set, 'test')
 		success = run_model(tool, answers)
 		if not success:

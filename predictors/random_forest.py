@@ -1,6 +1,9 @@
 from sklearn.ensemble import RandomForestRegressor 
 import pandas as pd
+import sys
+sys.path.append('../perf_runs/')
 from perf_reader import *
+sys.path.append('../grid_runs/')
 from grid import *
 import random
 
@@ -67,7 +70,7 @@ def random_forest(answers):
 	print r2
 
 	for i in range(len(test_names)):
-		answers[test_names[i]] = (test_pred[i], y_test[i])
+		answers[test_names[i]] = test_pred[i]
 	return True
 
 def predict(fold = 5):

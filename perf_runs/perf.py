@@ -1,6 +1,7 @@
 import sys
 sys.path.append('../core/')
 from execute import *
+sys.path.append('../grid_runs/')
 from one_pair import generate_vms_list
 import libvirt_client
 sys.path.append('/home/ypap/actimanager/common/')
@@ -61,7 +62,9 @@ def run_perf_vm(vms, node, port, tool):
 		tool_cmd = "/home/ypap/pcm/pcm.x 1 -ns -nsys -yc " + cores + " -csv=" + output_file
 	elif tool == 'perf':
 		pid = get_pid_from_vm_id(vm_instance, node)
-		events = "branch-instructions,branch-misses,cycles,instructions,page-faults,context-switches,cpu-migrations,cache-references,cache-misses"
+		# For Spanish paper
+		#events = "branch-instructions,branch-misses,cycles,instructions,page-faults,context-switches,cpu-migrations,cache-references,cache-misses"
+		events = 'instructions,cycles,branch-instructions,branch-misses,LLC-load-misses,LLC-store-misses,dTLB-load-misses,dTLB-store-misses,iTLB-load-misses,L1-dcache-load-misses,L1-icache-load-misses,l2_rqsts.miss'
 		tool_cmd = "perf kvm --guest stat -e " + events + " -I " + str(interval * 1000) +\
 					" -o " + output_file + " -p " + pid
 	ssh_cmd = 'ssh ' + node + ' "' + tool_cmd + '" &'

@@ -142,6 +142,8 @@ def perf_files(tool = 'pqos'):
 			if final_title == []: final_title = title
 			elif final_title != title: print "Title error on:", f
 			all_measures[f.split('.')[1]] = measures
+	#	all_measures['Title'] = final_title
+	### For spanish paper
 		all_measures['Title'] = final_title + final_title[1:] + ['Slowdown']
 	return all_measures
 

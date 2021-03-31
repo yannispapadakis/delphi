@@ -10,6 +10,9 @@ clos = 1.2
 grid = generate_grid()
 read_grid(grid)
 
+csv_dir = '/home/ypap/characterization/parse_results/csv/predictions/'
+wd_dir = '/home/ypap/characterization/algorithms/workload_pairs/' 
+
 ############################## Random Pairing ##############################
 
 def random_pairs(benchmarks):
@@ -97,7 +100,6 @@ def whisker_based(benchmarks):
 
 def predictor_based(benchmarks, real = False):
 	predictions = dict()
-	csv_dir = '/home/ypap/actimanager/workload/parse_results/csv/predictions/'
 	features = ['sens', 'cont']
 	suffix = '_' + str(clos) + '.csv'
 	for f in features:
@@ -150,7 +152,6 @@ def predictor_based(benchmarks, real = False):
 
 def q_predictor_based(benchmarks, real = False):
 	predictions = dict()
-	csv_dir = '/home/ypap/actimanager/workload/parse_results/csv/predictions/'
 	features = ['sens', 'cont']
 	suffix = '_q_' + str(clos) + '.csv'
 	for f in features:
@@ -192,7 +193,6 @@ def zipthem(zeros, notzeros):
 
 def custom_based(benchmarks, real = False, classes = 3):
 	predictions = dict()
-	csv_dir = '/home/ypap/actimanager/workload/parse_results/csv/predictions/'
 	features = ['sens', 'cont']
 	suffix = '_' + str(clos) + '.csv' if classes == 2 else '_q_' + str(clos) + '.csv'
 	for f in features:
@@ -288,7 +288,7 @@ def decide_pairs(benchmarks, algo, real = True, classes = 2):
 	return fix_pairing(stableroommate(prefs))
 
 def manual(args):
-	bench_file = '/home/ypap/actimanager/workload/workload_pairs/' + args[1] + '.csv'
+	bench_file = wd_dir + args[1] + '.csv'
 	algo = args[2]
 	if algo in ['predictor', 'custom']:
 		try:
@@ -321,7 +321,7 @@ def loop(args):
 	wr = csv.writer(fd, delimiter = ',')
 	for _file in workloads:
 		print "Workload:", _file
-		bench_file = '/home/ypap/actimanager/workload/workload_pairs/' + _file + '.csv'
+		bench_file = wd_dir + _file + '.csv'
 		fd = open(bench_file)
 		reader = csv.reader(fd, delimiter=',')
 		benchmarks = [row[0] + '-' + row[1] for row in reader]

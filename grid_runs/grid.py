@@ -9,33 +9,37 @@ csv_dir = home_dir + 'parse_results/csv/'
 
 vcpus = ['1', '2', '4', '8']
 
-def generate_grid():
+def generate_grid(benchmarks = []):
 	grid = OrderedDict()
-	benchmarks = os.listdir(pairs_dir)
+	if benchmarks == []: benchmarks = os.listdir(pairs_dir)
 	for b in benchmarks:
-		for v in vcpus:
-			bench = b + '-' + v
-			grid[bench] = OrderedDict()
+		if '-' in b:
+			grid[b] = OrderedDict()
+		else:
+			for v in vcpus:
+				bench = b + '-' + v
+				grid[bench] = OrderedDict()
 	return grid
 
-def read_grid(grid, name = 'grid'):
+def read_grid(grid, name = 'grid', include = []):
 	gridfile = csv_dir + name + '.csv'
 	try:
 		fd = open(gridfile)
 	except:
 		return False
 	gridread = csv.reader(fd, delimiter='\t')
-	benchmarks = []
 	new_files = []
 	for row in gridread:
 		if row[0] == '':
 			benchmarks = row
+			if include == []: include = benchmarks
 		else:
 			bench1 = row[0]
+			if bench1 not in include: continue
 			for (i, sd) in enumerate(row):
-				if i == 0:
-					continue
+				if i == 0: continue
 				bench2 = benchmarks[i]
+				if bench2 not in include: continue
 				if float(sd) > 0:
 					grid[bench1][bench2] = float(sd)
 				else:
@@ -89,9 +93,9 @@ def calculate_grid(grid):
 				dirs.append(dd)
 	fill_missing(grid, dirs)
 
-def transpose_grid(grid):
+def transpose_grid(grid, include = []):
 	keys = grid.keys()
-	gridT = generate_grid()
+	gridT = generate_grid(include)
 	for col in keys:
 		for row in keys:
 			try:
@@ -167,6 +171,13 @@ def make_grid(feature = 'sens', qos = [1.2], q = ''):
 		print_grid(grid, feature == 'cont')
 	(clos, whiskers, quantiles) = classes(grid, qos, q)
 	return (clos, whiskers, quantiles)
+
+def make_partial_grid(benchmarks, feature = 'sens', qos = [1.2], q = ''):
+	grid = generate_grid(benchmarks)
+	ok = read_grid(grid, include = benchmarks)
+	if feature == 'cont':
+		grid = transpose_grid(grid, benchmarks)
+	return classes(grid, qos, q)
 
 if __name__ == '__main__':
 	make_grid()
