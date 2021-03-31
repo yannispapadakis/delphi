@@ -7,12 +7,12 @@ sys.path.append('../grid_runs/')
 from grid import *
 import random
 
-def pair_perf():
-	measures = perf_files('perf')
+def pair_perf(benchmarks = []):
+	measures = perf_files('perf', 'sp')
 	pair_measures = []
 
-	grid = generate_grid()
-	read_grid(grid)
+	grid = generate_grid(benchmarks)
+	read_grid(grid, include = benchmarks)
 
 	for bench1 in grid:
 		perf1 = measures[bench1]
@@ -30,7 +30,7 @@ def csv_writer(rows, mode):
 	fd = open(out_file, mode = 'w')
 	writer = csv.writer(fd, delimiter = ',')
 
-	measures = perf_files('perf')
+	measures = perf_files('perf', 'sp')
 	writer.writerow(measures['Title'])
 
 	for row in rows:
@@ -42,7 +42,7 @@ def predicted_grid(answers):
 	grid = generate_grid()
 	for pair in answers:
 		(bench1, bench2) = pair.split('_')
-		grid[bench1][bench2] = answers[pair]
+		grid[bench1][bench2] = answers[pair][0]
 	return grid
 
 def random_forest(answers):
@@ -70,7 +70,7 @@ def random_forest(answers):
 	print r2
 
 	for i in range(len(test_names)):
-		answers[test_names[i]] = test_pred[i]
+		answers[test_names[i]] = (test_pred[i], y_test[i])
 	return True
 
 def predict(fold = 5):
@@ -95,7 +95,29 @@ def predict(fold = 5):
 		pass
 	
 	pred_grid = predicted_grid(answers)
+	print_ans(answers)
 	print_grid(pred_grid, name = 'pred_grid')
+
+def print_ans(answers):
+	fd = open(csv_dir + 'random_forest.csv', 'w')
+	wr = csv.writer(fd, delimiter = ',')
+	diff = []
+	for x in answers:
+		diff.append(abs(answers[x][1] - answers[x][0]))
+		wr.writerow(answers[x])
+	fd.close()
+	q1 = np.percentile(diff, 25)
+	q3 = np.percentile(diff, 75)
+	lower_whisker = min([x for x in diff if x >= q1 - 1.5 * (q3 - q1)])
+	upper_whisker = max([x for x in diff if x <= q3 + 1.5 * (q3 - q1)])
+	print "Average:    ", np.mean(diff)
+	print "Min:        ", min(diff)
+	print "L. Whisker: ", lower_whisker
+	print "Quartile 1: ", q1
+	print "Median:     ", np.percentile(diff, 50)
+	print "Quartile 3: ", q3
+	print "U. Whisker: ", upper_whisker
+	print "Max:        ", max(diff)
 
 if __name__ == '__main__':
 	predict()

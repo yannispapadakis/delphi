@@ -121,8 +121,8 @@ def read_perf_file(filename, directory):
 
 ############################################# Main ################################################
 
-def perf_files(tool = 'pqos'):
-	directory = perf_directory + tool + '/'
+def perf_files(tool = 'pqos', version = ''):
+	directory = perf_directory + tool + '-' + version + '/'
 	files = os.listdir(directory)
 	all_measures = dict()
 	if tool == 'pqos':
@@ -142,9 +142,10 @@ def perf_files(tool = 'pqos'):
 			if final_title == []: final_title = title
 			elif final_title != title: print "Title error on:", f
 			all_measures[f.split('.')[1]] = measures
-	#	all_measures['Title'] = final_title
-	### For spanish paper
-		all_measures['Title'] = final_title + final_title[1:] + ['Slowdown']
+		if version == '':
+			all_measures['Title'] = final_title
+		elif version == 'sp':
+			all_measures['Title'] = final_title + final_title[1:] + ['Slowdown']
 	return all_measures
 
 if __name__ == '__main__':
