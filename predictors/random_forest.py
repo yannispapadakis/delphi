@@ -7,12 +7,11 @@ sys.path.append('../grid_runs/')
 from grid import *
 import random
 
-def pair_perf(benchmarks = []):
-	measures = perf_files('perf', 'sp')
+def pair_perf(measures):
 	pair_measures = []
 
-	grid = generate_grid(benchmarks)
-	read_grid(grid, include = benchmarks)
+	grid = generate_grid()
+	read_grid(grid)
 
 	for bench1 in grid:
 		perf1 = measures[bench1]
@@ -25,18 +24,26 @@ def pair_perf(benchmarks = []):
 			pair_measures.append(row)
 	return pair_measures
 
-def csv_writer(rows, mode):
-	out_file = csv_dir + mode + '.csv'
-	fd = open(out_file, mode = 'w')
-	writer = csv.writer(fd, delimiter = ',')
+def csv_writer(pair_measures, train_set, test_set, title):
+	train_file = csv_dir + 'train.csv'
+	train_fd = open(train_file, mode = 'w')
+	train = csv.writer(train_fd, delimiter = ',')
+	test_file = csv_dir + 'test.csv'
+	test_fd = open(test_file, mode = 'w')
+	test = csv.writer(test_fd, delimiter = ',')
+	
+	train.writerow(title)
+	test.writerow(title)
 
-	measures = perf_files('perf', 'sp')
-	writer.writerow(measures['Title'])
+	for row in pair_measures:
+		(b1, b2) = row[0].split('_')
+		if b1 in train_set and b2 in train_set:
+			train.writerow(row)
+		elif b1 in test_set:
+			test.writerow(row)
 
-	for row in rows:
-		writer.writerow(row)
-
-	fd.close()	
+	train_fd.close()
+	test_fd.close()
 
 def predicted_grid(answers):
 	grid = generate_grid()
@@ -67,38 +74,35 @@ def random_forest(answers):
 		return False
 	test_pred = model.predict(test)
 	r2 = model.score(test, y_test) # return the coefficient of determination R^2 of the prediction
-	print r2
 
 	for i in range(len(test_names)):
 		answers[test_names[i]] = (test_pred[i], y_test[i])
-	return True
+	return r2
 
 def predict(fold = 5):
-	pair_measures = pair_perf()
-	chunksize = int(np.ceil(len(pair_measures) / float(fold)))
-	random.shuffle(pair_measures)
-	chunks = [pair_measures[i:i + chunksize] for i in range(0, len(pair_measures), chunksize)]
+	measures = perf_files('perf', 'sp')
+	benchmarks = [x for x in measures.keys() if x != 'Title']
+	chunksize = int(np.ceil(len(benchmarks) / float(fold)))
+	random.shuffle(benchmarks)
+	chunks = [benchmarks[i:i + chunksize] for i in range(0, len(benchmarks), chunksize)]
 	answers = dict()
+	r2 = []
 
+	pair_measures = pair_perf(measures)
 	for test_set in chunks:
 		train_chunks = [x for x in chunks if x != test_set]
 		train_set = [element for lst in train_chunks for element in lst]
-		csv_writer(train_set, 'train')
-		csv_writer(test_set, 'test')
-		success = random_forest(answers)
-		if not success: return 0
-	
+		csv_writer(pair_measures, train_set, test_set, measures['Title'])
+		r2.append(random_forest(answers))
+
 	os.remove(csv_dir + 'train.csv')
 	os.remove(csv_dir + 'test.csv')
-	for b in answers:
-		print b, '\t', answers[b]
-		pass
 	
 	pred_grid = predicted_grid(answers)
-	print_ans(answers)
+	print_ans(answers, r2)
 	print_grid(pred_grid, name = 'pred_grid')
 
-def print_ans(answers):
+def print_ans(answers, r2):
 	fd = open(csv_dir + 'random_forest.csv', 'w')
 	wr = csv.writer(fd, delimiter = ',')
 	diff = []
@@ -118,6 +122,8 @@ def print_ans(answers):
 	print "Quartile 3: ", q3
 	print "U. Whisker: ", upper_whisker
 	print "Max:        ", max(diff)
+	print "R2 Scores:"
+	pprint.pprint(r2)
 
 if __name__ == '__main__':
 	predict()
