@@ -24,7 +24,9 @@ def run_model(tool, answers):
 	train_data = pd.read_csv(csv_dir + 'train.csv')
 	test_data = pd.read_csv(csv_dir + 'test.csv')
 
-	remove_cols = [0,7] if tool == "pqos" else [0,38]
+	if tool == "pqos": remove_cols = [0, 7]
+	if tool == "pcm": remove_cols = [0, 38]
+	if tool == "perf": remove_cols = [0, 16]
 	train = train_data.drop(train_data.columns[remove_cols], axis = 1)
 	test = test_data.drop(test_data.columns[remove_cols], axis = 1)
 
@@ -114,7 +116,7 @@ if __name__ == '__main__':
 	if len(sys.argv) < 2:
 		print 'Arguments: feature (sens/cont), qos (csv), q (for quartiles)'
 		sys.exit(1)
-	tool = 'pqos'
+	tool = 'perf'
 	feature = sys.argv[1]
 	k = 8
 	qos = sorted(map(float, sys.argv[2].split(',')))

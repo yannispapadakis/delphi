@@ -24,7 +24,8 @@ def benchmarks_list(qos = 1.2, classes = 3):
 		else: groups[index] = [bench]
 	return groups
 
-def generate_workload(groups, contention = 'med', size = 40):
+def generate_workload(qos = 1.2, classes = 3, contention = 'med', size = 40):
+	groups = benchmarks_list(qos, classes)
 	bench_list = []
 	if contention == 'low': cont = 0
 	if contention == 'med': cont = 1
@@ -36,7 +37,6 @@ def generate_workload(groups, contention = 'med', size = 40):
 	workload_dir = '/home/ypap/characterization/algorithms/workload_pairs/'
 	wl_file = open(workload_dir + contention + '.csv', 'w')
 	for row in bench_list:
-		print row
 		wl_file.write(row + '\n')
 	wl_file.close()
 
@@ -46,4 +46,4 @@ if __name__ == '__main__':
 		sys.exit(1)
 	contention = sys.argv[1]
 	size = int(sys.argv[2])
-	generate_workload(benchmarks_list(), contention, size)
+	generate_workload(contention = contention, size = size)

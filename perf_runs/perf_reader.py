@@ -6,6 +6,7 @@ from operator import add
 ########################################### PCM Parser ###########################################
 
 perf_directory = '/home/ypap/characterization/perf_runs/results/'
+csv_dir = '/home/ypap/characterization/parse_results/csv/'
 
 def pcm_measures(filename, directory):
 	fd = open(directory + filename)
@@ -114,15 +115,70 @@ def read_perf_file(filename, directory):
 			else:
 				measures[event] = [value]
 			line = perf_f.readline()
+		perf_f.close()
+	if 'instructions' in measures and 'cycles' in measures:
+		measures['ipc_perf'] = map(lambda x: float(x[0]) / x[1] if x[1] > 0 else 0, 
+							  list(zip(measures['instructions'], measures['cycles'])))
+		measures.pop('cycles')
+	return measures
+
+def apply_mean(all_measures):
+	for bench in all_measures:
+		measures = all_measures[bench]
 		for event in measures:
 			measures[event] = np.mean(measures[event])
-		perf_f.close()
-	return ([name] + measures.values(), ['Bench'] + measures.keys())
+
+def perf_to_csv(measures, name):
+	out_file = open(csv_dir + 'perf_csv/' + name + '_perf.csv', 'w')
+	writer = csv.writer(out_file)
+	events = measures.keys()
+	writer.writerow(events)
+	for i in range(max(map(len, measures.values()))):
+		row = []
+		for key in events:
+			try:
+				row.append(str(measures[key][i]))
+			except:
+				row.append('')
+		writer.writerow(row)
+	out_file.close()
+
+def mpki_calculation(all_measures):
+	for bench in all_measures:
+		measures = all_measures[bench]
+		measures['branch-misses'] = map(lambda x: (float(x[0]) / x[1]) if x[1] > 0 else 0,
+									list(zip(measures['branch-misses'], measures['branch-instructions'])))
+		for event in [x for x in measures if 'miss' in x and 'branch' not in x]:
+			measures[event] = map(lambda x: (x[0] * 1000.0 / x[1]) if x[1] > 0 else 0,
+									list(zip(measures[event], measures['instructions'])))
+		measures.pop('branch-instructions')
+		measures.pop('instructions')
+
+def attach_pqos(all_measures):
+	pqos_files = os.listdir(perf_directory + 'pqos/')
+	for pqos_file in pqos_files:
+		pqos_f = open(perf_directory + 'pqos/' + pqos_file, 'r')
+		rd = csv.reader(pqos_f)
+		pqos_measures = dict()
+		for row in rd:
+			if row[0] == 'Time':
+				events = map(lambda x: x.lower(), row[2:])
+				for event in events:
+					pqos_measures[event] = []
+			else:
+				measure = row[2:]
+				for (i, event) in enumerate(events):
+					pqos_measures[event].append(float(measure[i]))
+		for event in pqos_measures:
+			all_measures[pqos_file.split('.')[1]][event] = pqos_measures[event]
 
 ############################################# Main ################################################
 
-def perf_files(tool = 'pqos', version = ''):
-	directory = perf_directory + tool + '-' + version + '/'
+def perf_files(tool = 'pqos'):
+	version = ''
+	if len(tool.split('-')) == 2:
+		(tool, version) = tool.split('-')
+	directory = perf_directory + tool + ('-' + version if version != '' else '') + '/'
 	files = os.listdir(directory)
 	all_measures = dict()
 	if tool == 'pqos':
@@ -138,12 +194,19 @@ def perf_files(tool = 'pqos', version = ''):
 	elif tool == 'perf':
 		final_title = []
 		for f in files:
-			(measures, title) = read_perf_file(f, directory)
-			if final_title == []: final_title = title
-			elif final_title != title: print "Title error on:", f
+			measures = read_perf_file(f, directory)
+			if final_title == []: final_title = measures.keys()
+			elif final_title != measures.keys(): print "Title error on:", f
 			all_measures[f.split('.')[1]] = measures
 		if version == '':
-			all_measures['Title'] = final_title
+			attach_pqos(all_measures)
+			mpki_calculation(all_measures)
+			apply_mean(all_measures)
+			for bench in all_measures:
+			#	perf_to_csv(all_measures[bench],bench)
+				final_title = all_measures[bench].keys()
+				all_measures[bench] = [bench] + all_measures[bench].values()
+			all_measures['Title'] = ['Benchmark'] + final_title + ['Class']
 		elif version == 'sp':
 			all_measures['Title'] = final_title + final_title[1:] + ['Slowdown']
 	return all_measures
@@ -151,3 +214,4 @@ def perf_files(tool = 'pqos', version = ''):
 if __name__ == '__main__':
 	measures = perf_files(sys.argv[1])
 	pprint.pprint(measures)
+	pprint.pprint(measures['Title'])
