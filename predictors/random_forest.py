@@ -56,12 +56,12 @@ def random_forest(answers):
 	train_data = pd.read_csv(csv_dir + 'train.csv')
 	test_data = pd.read_csv(csv_dir + 'test.csv')
 
-	remove_cols = [0, 19]
+	remove_cols = [0, 17]
 	train = train_data.drop(train_data.columns[remove_cols], axis = 1)
 	test = test_data.drop(test_data.columns[remove_cols], axis = 1)
 
-	train_names = train_data['Bench']
-	test_names = test_data['Bench']
+	train_names = train_data['Benchmark']
+	test_names = test_data['Benchmark']
 	y_train = train_data['Slowdown']
 	y_test = test_data['Slowdown']
 
@@ -80,7 +80,7 @@ def random_forest(answers):
 	return r2
 
 def predict(fold = 5):
-	measures = perf_files('perf', 'sp')
+	measures = perf_files('perf-sp')
 	benchmarks = [x for x in measures.keys() if x != 'Title']
 	chunksize = int(np.ceil(len(benchmarks) / float(fold)))
 	random.shuffle(benchmarks)

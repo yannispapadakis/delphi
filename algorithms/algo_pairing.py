@@ -313,8 +313,8 @@ def manual(args):
 def loop(args):
 	global clos
 	clos = float(args[1])
-	workloads = ['verylight', 'light', 'heavy']#, 'veryheavy']
-	algorithms = [#'oracle', 'forest', 'whisker', 'random', 
+	workloads = ['low', 'med', 'high']
+	algorithms = ['oracle', 'whisker', 'random', 
 				  #'predictor_real_2', 'predictor_real_3', 'predictor_pred_2', 'predictor_pred_3',
 				  'forest', 'custom_real_2', 'custom_real_3', 'custom_pred_2', 'custom_pred_3']
 	fd = open('res_' + str(clos) + '.csv', 'w')

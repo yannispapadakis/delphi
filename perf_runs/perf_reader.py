@@ -208,7 +208,13 @@ def perf_files(tool = 'pqos'):
 				all_measures[bench] = [bench] + all_measures[bench].values()
 			all_measures['Title'] = ['Benchmark'] + final_title + ['Class']
 		elif version == 'sp':
-			all_measures['Title'] = final_title + final_title[1:] + ['Slowdown']
+			apply_mean(all_measures)
+			for bench in all_measures:
+				all_measures[bench].pop('instructions')
+				final_title = all_measures[bench].keys()
+				all_measures[bench] = [bench] + all_measures[bench].values()
+			all_measures['Title'] = ['Benchmark'] + final_title + final_title + ['Slowdown']
+			print all_measures['Title']
 	return all_measures
 
 if __name__ == '__main__':
