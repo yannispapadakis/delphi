@@ -1,7 +1,9 @@
 import os, csv, sys
 import numpy as np
+from scipy.stats.mstats import gmean
 from collections import OrderedDict
 from operator import add
+import pprint
 
 ########################################### PCM Parser ###########################################
 
@@ -79,6 +81,21 @@ def read_pcm_file(filename, directory):
 
 ########################################## PQOS Parser ############################################
 
+def read_pqos_files(pqos_file):
+	pqos_f = open(perf_directory + 'pqos/' + pqos_file, 'r')
+	rd = csv.reader(pqos_f)
+	pqos_measures = dict()
+	for row in rd:
+		if row[0] == 'Time':
+			events = map(lambda x: x.lower(), row[2:])
+			for event in events:
+				pqos_measures[event] = []
+		else:
+			measure = row[2:]
+			for (i, event) in enumerate(events):
+				pqos_measures[event].append(float(measure[i]))
+	return pqos_measures
+
 def read_pqos_file(filename, directory):
 	with open(directory + filename) as csvf:
 		name = filename.split('.')[1]
@@ -97,7 +114,6 @@ def read_pqos_file(filename, directory):
 
 ########################################## Perf Parser ############################################
 
-import pprint
 def read_perf_file(filename, directory):
 	measures = OrderedDict()
 	with open(directory + filename) as perf_f:
@@ -124,6 +140,7 @@ def read_perf_file(filename, directory):
 
 def apply_mean(all_measures):
 	for bench in all_measures:
+		if bench == 'Title': continue
 		measures = all_measures[bench]
 		for event in measures:
 			measures[event] = np.mean(measures[event])
@@ -184,7 +201,12 @@ def perf_files(tool = 'pqos'):
 	if tool == 'pqos':
 		all_measures['Title'] = ['Benchmark', 'IPC', 'LLC_Misses', 'LLC', 'MBL', 'MBR', 'Vcpus', 'Class']
 		for f in files:
-			all_measures[f.split('.')[1]] = read_pqos_file(f, directory)
+			bench = f.split('.')[1]
+			measures = read_pqos_files(f)
+			for event in measures:
+				measures[event] = np.mean(measures[event])
+			all_measures[bench] = [bench] + measures.values() + [int(bench.split('-')[1])]
+			break
 	elif tool == 'pcm':
 		for f in files:
 			m = read_pcm_file(f, directory)
