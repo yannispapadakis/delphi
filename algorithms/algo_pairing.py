@@ -1,6 +1,8 @@
 import random, sys, csv, itertools
 import numpy as np
 from operator import itemgetter
+sys.path.append('../perf_runs/')
+from read_attackers import attacker_classifier
 sys.path.append('../grid_runs/')
 from grid import *
 from stableroomate import *
@@ -191,7 +193,7 @@ def zipthem(zeros, notzeros):
 	zeros2 = zeros[len(notzeros):]
 	return list(zip(zeros1, notzeros)) + list(zip(zeros2[:int(len(zeros2) / 2)], zeros2[int(len(zeros2) / 2):]))
 
-def custom_based(benchmarks, real = False, classes = 3):
+def get_predictions(benchmarks, real, classes):
 	predictions = dict()
 	features = ['sens', 'cont']
 	suffix = '_' + str(clos) + '.csv' if classes == 2 else '_q_' + str(clos) + '.csv'
@@ -201,12 +203,19 @@ def custom_based(benchmarks, real = False, classes = 3):
 			predictions[f] = dict((rows[0], rows[3]) for rows in reader) if real else dict((rows[0], rows[1]) for rows in reader)
 			del predictions[f]['Bench']
 			pred.close()
-	preds = dict((x, (int(predictions['sens'][x.split('.')[1]]), int(predictions['cont'][x.split('.')[1]]))) for x in benchmarks)
+	return dict((x, (int(predictions['sens'][x.split('.')[1]]), int(predictions['cont'][x.split('.')[1]]))) for x in benchmarks)
+
+def get_attacker(benchmarks):
+	classes = attacker_classifier()
+	return dict((x, classes[x.split('.')[1]]) for x in benchmarks)
+
+def custom_based(benchmarks, real = False, classes = 3, attackers = False):
+	if attackers: preds = get_attacker(benchmarks)
+	else: preds = get_predictions(benchmarks, real, classes)
 	zeros = [x for x in preds.items() if sum(x[1]) == 0]
 	random.shuffle(zeros)
 	notzeros = [x for x in preds.items() if x not in zeros]
 	order = [(1,0), (0,1), (2,0), (0,2), (2,2), (2,1), (1,2), (1,1)]
-	#order = [(0,1), (1,0), (0,2), (2,0), (2,2), (2,1), (1,2), (1,1)]
 	pairs = []
 	if len(zeros) < len(notzeros):
 		for comb in order:
@@ -217,7 +226,6 @@ def custom_based(benchmarks, real = False, classes = 3):
 			if len(zeros) >= len(notzeros):
 				break
 	pairs += zipthem(zeros, notzeros)
-	#pprint.pprint(pairs)
 	pairs = map(lambda x: [x[0][0], x[1][0]], pairs)
 	return pairs
 
@@ -284,6 +292,11 @@ def decide_pairs(benchmarks, algo, real = True, classes = 2):
 		violations = print_sd(pairs)
 		pairs = map(lambda x: [x[0].split('.')[1], x[1].split('.')[1]], pairs)
 		return violations
+	elif algo == 'attackers':
+		pairs = custom_based(benchmarks, attackers=True)
+		violations = print_sd(pairs)
+		pairs = map(lambda x: [x[0].split('.')[1], x[1].split('.')[1]], pairs)
+		return violations
 	#print_prefs(prefs, algo)
 	return fix_pairing(stableroommate(prefs))
 
@@ -314,7 +327,7 @@ def loop(args):
 	global clos
 	clos = float(args[1])
 	workloads = ['low', 'med', 'high']
-	algorithms = ['oracle', 'whisker', 'random', 
+	algorithms = ['oracle', 'whisker', 'random', 'attackers',
 				  #'predictor_real_2', 'predictor_real_3', 'predictor_pred_2', 'predictor_pred_3',
 				  'forest', 'custom_real_2', 'custom_real_3', 'custom_pred_2', 'custom_pred_3']
 	fd = open('res_' + str(clos) + '.csv', 'w')
@@ -335,17 +348,17 @@ def loop(args):
 	#			(algorithm, real, classes) = algo.split('_')
 	#			violations = decide_pairs(benchmarks, algorithm, real, int(classes))
 	#			wr.writerow([_file, algo, violations])
-			elif algo == 'random':
+			elif algo == 'random' or algo == 'attackers':
 				violations = []
 				for i in range(100):
 					violations.append(decide_pairs(benchmarks, algo))
-				wr.writerow([_file, algo, np.mean(violations), np.std(violations)])
+				wr.writerow([_file, algo, np.mean(violations)])
 			elif algo.startswith('custom'):
 				violations = []
 				(algorithm, real, classes) = algo.split('_')
 				for i in range(100):
 					violations.append(decide_pairs(benchmarks, algorithm, real, int(classes)))
-				wr.writerow([_file, algo, np.mean(violations), np.std(violations)])
+				wr.writerow([_file, algo, np.mean(violations)])
 	fd.close()
 			
 if __name__ == '__main__':
