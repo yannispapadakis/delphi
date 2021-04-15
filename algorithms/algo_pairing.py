@@ -323,50 +323,71 @@ def manual(args):
 	pairs = decide_pairs(benchmarks, algo, real, classes)
 	print(pairs)
 
+def print_results(results):
+	fd = open('/'.join(csv_dir.split('/')[:-2]) + '/' + 'violations_' + str(clos) + '.csv', 'w')
+	wr = csv.writer(fd, delimiter = ',')
+	sizes = map(str, sorted(map(int, results.keys())))
+	files = results[sizes[0]].keys()[::-1]
+	algorithms = results[sizes[0]][files[0]].keys()
+	for size in sizes:
+		wr.writerow([size] + files)
+		for algo in algorithms:
+			algo_pr = algo
+			if '_' in algo:
+				tokens = algo.split('_')
+				algo_pr = tokens[0].title() + ' (' + tokens[1].title() + ', ' + tokens[2] + ')'
+			row = [algo_pr]
+			for f in files:
+				row.append(results[size][f][algo])
+			wr.writerow(row)
+		wr.writerow([])
+	fd.close()
+
 def loop(args):
 	global clos
 	clos = float(args[1])
-	workloads = ['low', 'med', 'high']
+	files = os.listdir(wd_dir)
+	files = [x for x in files if x.endswith('.csv')]
+	workloads = set(map(lambda x: x.split('-')[0], files))
+	sizes = set(map(lambda x: x.split('-')[1].split('.')[0], files))
 	algorithms = ['oracle', 'whisker', 'random', 'attackers',
 				  #'predictor_real_2', 'predictor_real_3', 'predictor_pred_2', 'predictor_pred_3',
 				  'forest', 'custom_real_2', 'custom_real_3', 'custom_pred_2', 'custom_pred_3']
-	fd = open('res_' + str(clos) + '.csv', 'w')
-	wr = csv.writer(fd, delimiter = ',')
-	for _file in workloads:
-		print "Workload:", _file
-		bench_file = wd_dir + _file + '.csv'
-		fd = open(bench_file)
-		reader = csv.reader(fd, delimiter=',')
-		benchmarks = [row[0] + '-' + row[1] for row in reader]
-		
-		for algo in algorithms:
-			print "\tAlgorithm:", algo
-			if algo in ['oracle', 'forest', 'whisker']:
-				violations = decide_pairs(benchmarks, algo)
-				wr.writerow([_file, algo, violations])
-	#		elif algo.startswith('predictor'):
-	#			(algorithm, real, classes) = algo.split('_')
-	#			violations = decide_pairs(benchmarks, algorithm, real, int(classes))
-	#			wr.writerow([_file, algo, violations])
-			elif algo == 'random' or algo == 'attackers':
-				violations = []
-				for i in range(100):
-					violations.append(decide_pairs(benchmarks, algo))
-				wr.writerow([_file, algo, np.mean(violations)])
-			elif algo.startswith('custom'):
-				violations = []
-				(algorithm, real, classes) = algo.split('_')
-				for i in range(100):
-					violations.append(decide_pairs(benchmarks, algorithm, real, int(classes)))
-				wr.writerow([_file, algo, np.mean(violations)])
-	fd.close()
+	results = OrderedDict()
+	for size in sizes:
+		print "Size:", size
+		results[size] = OrderedDict()
+		for _file in workloads:
+			results[size][_file] = OrderedDict()
+			print "\tWorkload:", _file
+			bench_file = wd_dir + _file + '-' + size + '.csv'
+			bench_f = open(bench_file)
+			reader = csv.reader(bench_f, delimiter=',')
+			benchmarks = [row[0] + '-' + row[1] for row in reader]
+
+			for algo in algorithms:
+				print "\t\tAlgorithm:", algo
+				if algo in ['oracle', 'forest', 'whisker']:
+					violations = [decide_pairs(benchmarks, algo)]
+				elif algo == 'random' or algo == 'attackers':
+					violations = []
+					for i in range(100):
+						violations.append(decide_pairs(benchmarks, algo))
+				elif algo.startswith('custom'): # 'predictor'
+					violations = []
+					(algorithm, real, classes) = algo.split('_')
+					for i in range(100):
+						violations.append(decide_pairs(benchmarks, algorithm, real, int(classes)))
+				results[size][_file][algo] = np.mean(violations)
+			bench_f.close()
+	print_results(results)
 			
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
 		print "Usage: m for manual"
 		print "loop: clos"
 		print "manual: workload, algorithm, real, classes"
-		print "algorithms: oracle, forest, whisker, random, predictor, custom"
+		print "algorithms: oracle, forest, attackers, whisker, random, predictor, custom"
 		sys.exit(1)
 	if sys.argv[1] == 'm': manual(sys.argv[1:])
 	else: loop(sys.argv)

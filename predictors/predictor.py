@@ -26,7 +26,7 @@ def run_model(tool, answers):
 
 	if tool == "pqos": remove_cols = [0, 7]
 	if tool == "pcm": remove_cols = [0, 38]
-	if tool == "perf": remove_cols = [0, 16]
+	if tool == "perf": remove_cols = [0, 10,16]
 	train = train_data.drop(train_data.columns[remove_cols], axis = 1)
 	test = test_data.drop(test_data.columns[remove_cols], axis = 1)
 

@@ -35,7 +35,7 @@ def generate_workload(qos = 1.2, classes = 3, contention = 'med', size = 40):
 			bench_list.append(random.choice(groups[c]).replace('-',','))
 		bench_list.append(random.choice(groups[cont]).replace('-',','))
 	workload_dir = '/home/ypap/characterization/algorithms/workload_pairs/'
-	wl_file = open(workload_dir + contention + '.csv', 'w')
+	wl_file = open(workload_dir + contention + '-' + str(size) + '.csv', 'w')
 	for row in bench_list:
 		wl_file.write(row + '\n')
 	wl_file.close()

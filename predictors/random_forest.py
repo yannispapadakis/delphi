@@ -55,8 +55,9 @@ def predicted_grid(answers):
 def random_forest(answers):
 	train_data = pd.read_csv(csv_dir + 'train.csv')
 	test_data = pd.read_csv(csv_dir + 'test.csv')
-
-	remove_cols = [0, 17]
+	
+	#remove_cols = [0,8,10,13,21,23,26,27] # Benchmark, IPC (perf), IPC (pqos), LLC Misses, Slowdown
+	remove_cols = [0, 8, 16, 17] # Benchmark, IPC (1), IPC (2), Slowdown
 	train = train_data.drop(train_data.columns[remove_cols], axis = 1)
 	test = test_data.drop(test_data.columns[remove_cols], axis = 1)
 

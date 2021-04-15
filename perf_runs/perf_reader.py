@@ -236,7 +236,6 @@ def perf_files(tool = 'pqos'):
 				final_title = all_measures[bench].keys()
 				all_measures[bench] = [bench] + all_measures[bench].values()
 			all_measures['Title'] = ['Benchmark'] + final_title + final_title + ['Slowdown']
-			print all_measures['Title']
 	return all_measures
 
 if __name__ == '__main__':
