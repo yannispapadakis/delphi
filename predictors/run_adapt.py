@@ -22,7 +22,8 @@ def test_acc_2(iterations = 20):
 						qq = '_q' if q == 'q' else ''
 						name = feature + qq + '_' + str(x) + '.csv'
 						os.rename(csv_dir + name, csv_dir + 'predictions/' + name)
-		fd = open('csv/adaptivity/adapt2' + q + '.csv', mode='a+')
+				print feature, x, "Average:", gmean(filter(lambda x: x>0, ans[feature][x]))
+		fd = open('/home/ypap/characterization/parse_results/csv/adaptivity/adapt2' + q + '.csv', mode='a+')
 		writer = csv.writer(fd, delimiter=',')
 		for x in clos:
 			row = [x]

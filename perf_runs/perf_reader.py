@@ -143,7 +143,8 @@ def apply_mean(all_measures):
 		if bench == 'Title': continue
 		measures = all_measures[bench]
 		for event in measures:
-			measures[event] = np.mean(measures[event])
+			#measures[event] = np.mean(measures[event])
+			measures[event] = gmean(filter(lambda x: x > 0, measures[event]))
 
 def perf_to_csv(measures, name):
 	out_file = open(csv_dir + 'perf_csv/' + name + '_perf.csv', 'w')
@@ -165,6 +166,9 @@ def mpki_calculation(all_measures):
 		measures = all_measures[bench]
 		measures['branch-misses'] = map(lambda x: (float(x[0]) / x[1]) if x[1] > 0 else 0,
 									list(zip(measures['branch-misses'], measures['branch-instructions'])))
+		measures['dTLB-misses'] = map(sum, list(zip(measures['dTLB-load-misses'], measures['dTLB-store-misses'])))
+		measures.pop('dTLB-load-misses')
+		measures.pop('dTLB-store-misses')
 		for event in [x for x in measures if 'miss' in x and 'branch' not in x]:
 			measures[event] = map(lambda x: (x[0] * 1000.0 / x[1]) if x[1] > 0 else 0,
 									list(zip(measures[event], measures['instructions'])))

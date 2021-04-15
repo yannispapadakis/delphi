@@ -20,13 +20,16 @@ def csv_writer(measures, classes, benches, mode):
 			writer.writerow(outrow)
 	fd.close()
 
-def run_model(tool, answers):
+def run_model(tool, answers, feature):
 	train_data = pd.read_csv(csv_dir + 'train.csv')
 	test_data = pd.read_csv(csv_dir + 'test.csv')
 
 	if tool == "pqos": remove_cols = [0, 7]
 	if tool == "pcm": remove_cols = [0, 38]
-	if tool == "perf": remove_cols = [0, 10,16]
+	if tool == "perf" and feature == 'cont':
+		remove_cols = [0, 2, 3, 4, 5, 6, 8, 15]
+	if tool == "perf" and feature == 'sens':
+		remove_cols = [0, 8, 13, 15]
 	train = train_data.drop(train_data.columns[remove_cols], axis = 1)
 	test = test_data.drop(test_data.columns[remove_cols], axis = 1)
 
@@ -62,7 +65,6 @@ def print_pred(answers, outfile, whiskers, quartiles, clos):
 	writer = csv.writer(fd, delimiter='\t')
 	correct = 0
 	writer.writerow(['Bench', 'Prediction', 'Dec. Func', 'Real', 'Whisker', 'Q3'])
-	#writer.writerow(['Bench', 'Prediction', 'Dec. Func', 'Real', 'Whisker'])
 	for x in answers:
 		(pred, prob, real) = answers[x]
 		buckets[pred] = (buckets[pred][0] + 1, buckets[pred][1])
@@ -85,7 +87,7 @@ def print_pred(answers, outfile, whiskers, quartiles, clos):
 	return accuracy
 
 def predict(fold = 8, clos = [1.2] , tool = 'pqos', feature = 'sens', q = ''):
-	print "Feature: " + feature + ', CLoS: ' + ','.join([str(x) for x in clos]) + ', tool: ' + tool 
+	print "Feature: " + feature + ', CLoS: ' + ','.join([str(x) for x in clos]) + ', tool: ' + tool
 	measures = perf_files(tool)
 	chunksize = len(measures.keys()) / fold
 	benches = [x for x in measures.keys() if x != 'Title']
@@ -101,7 +103,7 @@ def predict(fold = 8, clos = [1.2] , tool = 'pqos', feature = 'sens', q = ''):
 		(train_classes, _, _) = make_partial_grid(train_set, feature, clos, q)
 		csv_writer(measures, train_classes, train_set, 'train')
 		csv_writer(measures, classes, test_set, 'test')
-		success = run_model(tool, answers)
+		success = run_model(tool, answers, feature)
 		if not success:
 			return 0
 
