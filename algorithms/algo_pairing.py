@@ -70,8 +70,8 @@ def oracle(benchmarks, mode = 'real'):
 	return prefs
 
 def whisker_based(benchmarks):
-	sens_whiskers = make_grid('sens', [clos])[1]
-	cont_whiskers = make_grid('cont', [clos])[1]
+	sens_whiskers = classes(grid, [clos])[1]
+	cont_whiskers = classes(transpose_grid(grid), [clos])[1]
 	whiskers = dict((x, (sens_whiskers[x.split('.')[1]], cont_whiskers[x.split('.')[1]])) for x in benchmarks)
 	prefs = dict()
 	for bench in benchmarks:

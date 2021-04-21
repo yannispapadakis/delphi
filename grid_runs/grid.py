@@ -122,26 +122,46 @@ def qos_class_new(qos, whisker, q3):
 		q_class = len(qos)
 	return w_class + q_class
 
-def classes(grid, qos, q = ''):
+def classes(grid, qos, class_num = 2):
 	clos = dict()
 	whiskers = dict()
-	quantiles3 = dict()
+	quartiles3 = dict()
 	for bench in grid.keys():
-		if not grid[bench]:
-			continue
+		if not grid[bench]: continue
 		measures = map(float, grid[bench].values())
-		quantile3 = np.percentile(measures,75)
-		quantile1 = np.percentile(measures,25)
-		iqr = quantile3 - quantile1
-		whisker_lim = quantile3 + 1.5 * iqr
+		quartile3 = np.percentile(measures,75)
+		quartile1 = np.percentile(measures,25)
+		iqr = quartile3 - quartile1
+		whisker_lim = quartile3 + 1.5 * iqr
 		whisker = max([x for x in measures if x <= whisker_lim])
-		if q == '':
+		if class_num == 2:
 			clos[bench] = qos_class(qos, whisker)
-		elif q == 'q':
-			clos[bench] = qos_class_new(qos, whisker, quantile3)
+		elif class_num == 3:
+			clos[bench] = qos_class_new(qos, whisker, quartile3)
 		whiskers[bench] = whisker
-		quantiles3[bench] = quantile3
-	return (clos, whiskers, quantiles3)
+		quartiles3[bench] = quartile3
+	return (clos, whiskers, quartiles3)
+
+def print_stats(grid):
+	stats = dict()
+	for bench in grid.keys():
+		if not grid[bench]: continue
+		measures = map(float, grid[bench].values())
+		quartile3 = np.percentile(measures,75)
+		median = np.percentile(measures,50)
+		quartile1 = np.percentile(measures,25)
+		iqr = quartile3 - quartile1
+		whisker_lim = quartile3 + 1.5 * iqr
+		whisker = max([x for x in measures if x <= whisker_lim])
+		uisker_lim = quartile1 - 1.5 * iqr
+		uisker = min([x for x in measures if x >= uisker_lim])
+		stats[bench] = [uisker, quartile1, median, quartile3, whisker]
+	fd = open(csv_dir + 'stats.csv', 'w')
+	wr = csv.writer(fd)
+	wr.writerow(['Benchmark', 'LowerWhisker', 'Quartile1', 'Median', 'Quartile3', 'UpperWhisker'])
+	for bench in stats:
+		wr.writerow([bench] + stats[bench])
+	fd.close()
 
 def print_grid(grid, T = False, name = 'grid'):
 	out_file = csv_dir + name + "T.csv" if T else csv_dir + name + ".csv"
@@ -160,7 +180,7 @@ def print_grid(grid, T = False, name = 'grid'):
 		writer.writerow(print_line)
 	fd.close()
 
-def make_grid(feature = 'sens', qos = [1.2], q = ''):
+def make_grid(feature = 'sens', qos = [1.2], class_num = 2):
 	grid = generate_grid()
 	ok = read_grid(grid)
 	if not ok:
@@ -169,15 +189,15 @@ def make_grid(feature = 'sens', qos = [1.2], q = ''):
 		grid = transpose_grid(grid)
 	if not ok:
 		print_grid(grid, feature == 'cont')
-	(clos, whiskers, quantiles) = classes(grid, qos, q)
-	return (clos, whiskers, quantiles)
+	print_stats(grid)
+	return classes(grid, qos, class_num)
 
-def make_partial_grid(benchmarks, feature = 'sens', qos = [1.2], q = ''):
+def make_partial_grid(benchmarks, feature = 'sens', qos = [1.2], class_num = 2):
 	grid = generate_grid(benchmarks)
 	ok = read_grid(grid, include = benchmarks)
 	if feature == 'cont':
 		grid = transpose_grid(grid, benchmarks)
-	return classes(grid, qos, q)
+	return classes(grid, qos, class_num)
 
 if __name__ == '__main__':
 	make_grid()
