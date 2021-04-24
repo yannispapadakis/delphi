@@ -222,7 +222,7 @@ def perf_files(tool = 'pqos'):
 		for f in files:
 			measures = read_perf_file(f, directory)
 			if final_title == []: final_title = measures.keys()
-			elif final_title != measures.keys(): print "Title error on:", f
+			elif final_title != measures.keys(): print("Title error on:", f)
 			all_measures[f.split('.')[1]] = measures
 		if version == '':
 			attach_pqos(all_measures)

@@ -19,7 +19,7 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 				event_type = json_data['event']
 				event_str = json_data['time']
 				event_time = datetime.datetime.strptime(json_data['time'], "%Y-%m-%d.%X")
-				event_epoch = long(event_time.strftime("%s"))
+				event_epoch = int(event_time.strftime("%s"))
 
 				# Reports
 				if event_type == "internal-profit-report":
@@ -164,6 +164,7 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 			workload_file = line.split()[7]
 
 		line = fp.readline()
+	fp.close()
 	dicts = [vms_names, vm_perfs, vm_event_times, vms_boot_time, vms_hosts, vms_cost_function, vms_vcpus, vm_times_completed]
 	for vm_seq_num in vms_names:
 		try:
@@ -198,7 +199,7 @@ def perf_and_income(vm_perfs, vm_names, vms_cost_function, gold_vms, vm_total, v
 			vm_total[vm] = 0
 			continue
 		if vm_perfs[vm] == []:
-			print "EMPTY LIST OF PERFS: ", vm
+			print("EMPTY LIST OF PERFS: ", vm)
 		vcpus = vms_vcpus[vm]
 		duration = time_axis[-1] - time_axis[0]
 		duration_mins = duration / 60.0
@@ -245,7 +246,7 @@ def isolation_income(vms_names, vms_vcpus, vm_total_opt, vm_times_completed):
 def parse_files(ld = pairs_dir, endswith = '.txt'):
 	files = [f for f in os.listdir(ld) if f.endswith(endswith)]
 	if files == []:
-		print "No files found with given pattern in dir: ", ld
+		print("No files found with given pattern in dir: ", ld)
 		return None
 	files.sort(reverse=True)
 
@@ -277,7 +278,7 @@ def parse_files(ld = pairs_dir, endswith = '.txt'):
 						vm_times_completed, vm_uuid, est_profit, vm_times_str, vm_esd,\
 						vm_esd_reports)
 		except:
-			print "Error in:", filename
+			print("Error in:", filename)
 			return {}
 		if ret[0] != '0':
 			failures.append(ret)
@@ -299,7 +300,7 @@ def parse_files(ld = pairs_dir, endswith = '.txt'):
 		pass #print "Parsed all files successfully in dir:", ld
 	else:
 		for f in failures:
-			print "From file: " + f[0] + "\n\tVMs removed: " + str(f[1])
+			print("From file: " + f[0] + "\n\tVMs removed: " + str(f[1]))
 	return total_measures
 
 #total_measures = parse_files()

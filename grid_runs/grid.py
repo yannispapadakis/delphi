@@ -72,7 +72,7 @@ def fill_missing(grid, dirs):
 				try:
 					(name_0, name_1) = (measures['vms_names'][0], measures['vms_names'][1])
 				except KeyError:
-					print file_
+					print(file_)
 				name_0 = name_0.split('-')[3].split('.')[1]
 				name_1 = name_1.split('-')[3].split('.')[1]
 				(vcpus_0, vcpus_1) = (str(measures['vms_vcpus'][0]), str(measures['vms_vcpus'][1]))
@@ -128,7 +128,7 @@ def classes(grid, qos, class_num = 2):
 	quartiles3 = dict()
 	for bench in grid.keys():
 		if not grid[bench]: continue
-		measures = map(float, grid[bench].values())
+		measures = list(map(float, grid[bench].values()))
 		quartile3 = np.percentile(measures,75)
 		quartile1 = np.percentile(measures,25)
 		iqr = quartile3 - quartile1
@@ -146,7 +146,7 @@ def print_stats(grid):
 	stats = dict()
 	for bench in grid.keys():
 		if not grid[bench]: continue
-		measures = map(float, grid[bench].values())
+		measures = list(map(float, grid[bench].values()))
 		quartile3 = np.percentile(measures,75)
 		median = np.percentile(measures,50)
 		quartile1 = np.percentile(measures,25)
