@@ -5,6 +5,12 @@ sys.path.append('../perf_runs/')
 from sklearn import preprocessing
 from grid import *
 from perf_reader import *
+from datetime import datetime
+
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 def csv_writer(measures, classes, benches, mode):
 	out_file = csv_dir + mode + '.csv'
@@ -27,11 +33,6 @@ def print_pred(answers, outfile):
 		(pred, real) = answers[x]
 		writer.writerow([x, pred, real])
 	fd.close()
-
-from sklearn.svm import SVC
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.ensemble import RandomForestClassifier
 
 def select_model(mod):
 	if mod == 'SVC'         : return SVC(kernel='rbf', C=10, gamma='scale', probability=True)
@@ -57,14 +58,16 @@ def run_model(answers, feature, mod = 'SVC'):
 	y_train = train_data['Class']
 	y_test = test_data['Class']
 
-	model = select_model(mod)
+	if type(model) == str:
+		model = select_model(mod)
+	else: model = mod
 
 	train_scaled = scaler.transform(train)
 	test_scaled = scaler.transform(test)
 	try:
 		model.fit(train_scaled, y_train)
 	except ValueError:
-		print "Only 1 class provided"
+		#print "Only 1 class provided"
 		return 0
 
 	test_pred = model.predict(test_scaled)
@@ -96,18 +99,19 @@ def predict(clos = [1.2] , feature = 'sens', mod = 'SVC', class_num = 2):
 		acc_scores.append(run_model(answers, feature, mod))
 
 	outfile = csv_dir + feature + '_' + str(class_num) + '_' + ','.join([str(x) for x in clos]) + '.csv'
-	print_pred(answers, outfile)
 	os.remove(csv_dir + 'train.csv')
 	os.remove(csv_dir + 'test.csv')
-	print feature + ' | ' + ','.join([str(x) for x in clos]) + ' | C:' + str(class_num) + ' | ' + mod + ' | ' + str(100 * round(np.mean(acc_scores), 4)) + '%'
+	if type(mod) == str:
+		print_pred(answers, outfile)
+		print(feature + ' | ' + ','.join([str(x) for x in clos]) + ' | C:' + str(class_num) + ' | ' + mod + ' | ' + str(100 * round(np.mean(acc_scores), 4)) + '%')
 	return np.mean(acc_scores)
 
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
-		print 'Arguments: feature (sens/cont), qos (csv), number of classes (2 or 3)'
+		print('Arguments: feature (sens/cont), qos (csv), number of classes (2 or 3)')
 		sys.exit(1)
 	feature = sys.argv[1]
-	mod = 'SVC'
+	mod = 'KN'
 	qos = sorted(map(float, sys.argv[2].split(',')))
 	try:
 		class_num = int(sys.argv[3])

@@ -144,7 +144,7 @@ def apply_mean(all_measures):
 		measures = all_measures[bench]
 		for event in measures:
 			#measures[event] = np.mean(measures[event])
-			measures[event] = gmean(filter(lambda x: x > 0, measures[event]))
+			measures[event] = gmean(list(filter(lambda x: x > 0, measures[event])))
 
 def perf_to_csv(measures, name):
 	out_file = open(csv_dir + 'perf_csv/' + name + '_perf.csv', 'w')
@@ -230,15 +230,15 @@ def perf_files(tool = 'pqos'):
 			apply_mean(all_measures)
 			for bench in all_measures:
 			#	perf_to_csv(all_measures[bench],bench)
-				final_title = all_measures[bench].keys()
-				all_measures[bench] = [bench] + all_measures[bench].values()
+				final_title = list(all_measures[bench].keys())
+				all_measures[bench] = [bench] + list(all_measures[bench].values())
 			all_measures['Title'] = ['Benchmark'] + final_title + ['Class']
 		elif version == 'sp':
 			apply_mean(all_measures)
 			for bench in all_measures:
 				all_measures[bench].pop('instructions')
-				final_title = all_measures[bench].keys()
-				all_measures[bench] = [bench] + all_measures[bench].values()
+				final_title = list(all_measures[bench].keys())
+				all_measures[bench] = [bench] + list(all_measures[bench].values())
 			all_measures['Title'] = ['Benchmark'] + final_title + final_title + ['Slowdown']
 	return all_measures
 

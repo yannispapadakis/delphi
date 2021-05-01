@@ -9,14 +9,6 @@ import shell_command
 
 perf_dir = "/home/ypap/measurements-pqos/"
 
-'''	events:
-	instructions		cycles							l3_mpki
-	l3_acpki			mem_bwdth						avg_l2_miss_stalls
-	tot_l2_miss_stalls	l2_miss_stalls_pros_tot_cycles	l3_mpki_pros_l3_acpki
-
-	tlb miss rate		top down microarch approach -> vtune
-'''
-
 def pin_vcpus(vm, vcpus, node):
 	try:
 		libvirt_instance_name = getattr(vm, 'OS-EXT-SRV-ATTR:instance_name')
