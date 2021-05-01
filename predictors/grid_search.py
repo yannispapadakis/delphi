@@ -1,7 +1,6 @@
 from predictor import *
 
 def model_run(model, feat):
-	return 1
 	acc = []
 	for i in range(10):
 		acc.append(predict(mod = model, feature = feat))
@@ -10,9 +9,9 @@ def model_run(model, feat):
 def writer(config, max_acc, fd):
 	acc = config[-1]
 	config = map(str, config)
-	config = [it for sublist in zip(config, ['\t' for i in range(len(config))]) for it in sublist]
-	fd.write(''.join(config) + '\n')
-	print(datetime.now().strftime("%d/%m/%Y %H:%M:%S") + t + ''.join(config))
+	config = ''.join([it for sublist in zip(config, ['\t' for i in range(len(config))]) for it in sublist])
+	fd.write(config + '\n')
+	print(datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '\t' + config)
 	return (acc, config) if acc > max_acc[0] else max_acc
 
 def svc_grid(fd, feat):
@@ -29,7 +28,7 @@ def svc_grid(fd, feat):
 				model = SVC(C=C, kernel=kernel, degree=degree)
 				acc = model_run(model, feat)
 				max_svc = writer(['SVC', C, kernel, degree, acc], max_svc, fd)
-	return max_svc
+	return max_svc[1]
 
 def dt_grid(fd, feat):
 	dt_criterion = ['gini', 'entropy']
@@ -50,11 +49,11 @@ def dt_grid(fd, feat):
 													   max_features=max_features)
 						acc = model_run(model, feat)
 						max_dt = writer(['DT', criterion, splitter, min_samples_split, min_samples_leaf, max_features, acc], max_dt, fd)
-	return max_dt
+	return max_dt[1]
 
-def kn_grid(fd, feat)
+def kn_grid(fd, feat):
 	kn_n_neighbors = range(2, 8)
-	kn_weights = ['uniform', 'distance']:
+	kn_weights = ['uniform', 'distance']
 	kn_algorithm = ['ball_tree', 'kd_tree', 'brute']
 	kn_leaf_size = [5 * x for x in range(1, 5)]
 	kn_p = range(1,4)
@@ -69,7 +68,7 @@ def kn_grid(fd, feat)
 													 algorithm=algorithm, leaf_size=leaf_size, p=p)
 						acc = model_run(model, feat)
 						max_kn = writer(['KN', n_neighbors, weights, algorithm, leaf_size, p, acc], max_kn, fd)
-	return max_kn
+	return max_kn[1]
 
 def rf_grid(fd, feat):
 	rf_n_estimators = [5 * x for x in range(4,11)]
@@ -84,32 +83,30 @@ def rf_grid(fd, feat):
 			for min_samples_split in rf_min_samples_split:
 				for min_samples_leaf in rf_min_samples_leaf:
 					for max_features in rf_max_features:
-						for bootstrap in rf_bootstrap::
+						for bootstrap in rf_bootstrap:
 							model = RandomForestClassifier(n_estimators=n_estimators, criterion=criterion, 
 														   min_samples_split=min_samples_split,
 														   min_samples_leaf=min_samples_leaf,
 														   max_features=max_features, bootstrap=bootstrap)
 							acc = model_run(model, feat)
 							max_rf = writer(['RF', n_estimators, criterion, min_samples_split, min_samples_leaf, max_features, bootstrap, acc], max_rf, fd)
-	return max_rf
+	return max_rf[1]
 
 def grid_search(m):
-	fd = open("t_search.txt", 'w')
-	max_dt = max_kn = max_rf = (0, '')
-	feat = 'sens'
+	feat = 'cont'
+	fd = open(feat + "_search.txt", 'w')
+	optimal = []
 
 	if m == 'SVC' or m == 'all':
-		svc_grid(fd, feat)
+		optimal.append(svc_grid(fd, feat))
 	if m == 'DT' or m == 'all':
-		dt_grid(fd, feat)
+		optimal.append(dt_grid(fd, feat))
 	if m == 'KN' or m == 'all':
-		kn_grid(fd, feat)
+		optimal.append(kn_grid(fd, feat))
 	if m == 'RF' or m == 'all':
-		rf_grid(fd, feat)
-	fd.write('\n' + str(max_svc) + '\n')
-	fd.write(str(max_dt) + '\n')
-	fd.write(str(max_kn) + '\n')
-	fd.write(str(max_rf) +'\n')
+		optimal.append(rf_grid(fd, feat))
+	for x in optimal:
+		fd.write(x + '\n')
 	fd.close()
 	return 0
 

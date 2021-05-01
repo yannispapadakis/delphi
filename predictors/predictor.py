@@ -34,11 +34,27 @@ def print_pred(answers, outfile):
 		writer.writerow([x, pred, real])
 	fd.close()
 
-def select_model(mod):
-	if mod == 'SVC'         : return SVC(kernel='rbf', C=10, gamma='scale', probability=True)
-	if mod == 'DecisionTree': return DecisionTreeClassifier(max_features = 'sqrt')
-	if mod == 'KNeighbors'  : return KNeighborsClassifier()
-	if mod == 'RandomForest': return RandomForestClassifier()
+def select_model(mod, feature):
+	if mod == 'SVC':
+		if feature == 'sens':
+			return SVC(kernel='linear', C=1)
+		if feature == 'cont':
+			return SVC(kernel='linear', C=0.9)
+	if mod == 'DT':
+		if feature == 'sens':
+			return DecisionTreeClassifier(criterion='entropy',splitter='random',min_samples_leaf=2)
+		if feature == 'cont':
+			return DecisionTreeClassifier(min_samples_split=7, min_samples_leaf=5, max_features='log2')
+	if mod == 'KNeighbors':
+		if feature == 'sens':
+			return KNeighborsClassifier(n_neighbors=6, weights='distance', algorithm='ball_tree', leaf_size=15, p=3)
+		if feature == 'cont':
+			return KNeighborsClassifier(n_neighbors=7, weights='uniform', algorithm='ball_tree', leaf_size=10, p=1)
+	if mod == 'RandomForest':
+		if feature == 'sens':
+			return RandomForestClassifier(n_estimators=50, criterion='entropy', min_samples_split=9, min_samples_leaf=5, max_features='log2')
+		if feature == 'cont':
+			return RandomForestClassifier(n_estimators=40, min_samples_split=6, min_samples_leaf=4, max_features='log2')
 
 def run_model(answers, feature, mod = 'SVC'):
 	train_data = pd.read_csv(csv_dir + 'train.csv')
@@ -58,8 +74,8 @@ def run_model(answers, feature, mod = 'SVC'):
 	y_train = train_data['Class']
 	y_test = test_data['Class']
 
-	if type(model) == str:
-		model = select_model(mod)
+	if type(mod) == str:
+		model = select_model(mod, feature)
 	else: model = mod
 
 	train_scaled = scaler.transform(train)

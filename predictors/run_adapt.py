@@ -6,9 +6,9 @@ def test_acc_2(iterations = 20):
 	k = 8
 	tool = 'perf'
 	lim = 1.5
-	mod = 'DecisionTree'
+	mod = 'KN'
 	clos = [round(0.1 * x, 1) for x in range(11, int(lim * 10 + 1))]
-	for q in ['', 'q']:
+	for classes in in [2, 3]:
 		ans = dict()
 		for feature in features:
 			ans[feature] = dict()
@@ -16,22 +16,22 @@ def test_acc_2(iterations = 20):
 				ans[feature][x] = []
 				max_acc = 0.0
 				for i in range(iterations):
-					acc = predict(k, [x], tool, feature, mod, q)
+					acc = predict([x], feature, mod, classes)
 					ans[feature][x].append(acc)
-				#	if acc > max_acc:
-				#		max_acc = acc
-				#		qq = '_q' if q == 'q' else ''
-				#		name = feature + qq + '_' + str(x) + '.csv'
-				#		os.rename(csv_dir + name, csv_dir + 'predictions/' + name)
-				print feature, x, "Average:", gmean(filter(lambda x: x>0, ans[feature][x]))
-	#	fd = open('/home/ypap/characterization/parse_results/csv/adaptivity/adapt2' + q + '.csv', mode='a+')
-	#	writer = csv.writer(fd, delimiter=',')
-	#	for x in clos:
-	#		row = [x]
-	#		for f in features:
-	#			row.extend([gmean(ans[f][x]), -1])
-	#		writer.writerow(row)
-	#	fd.close()
+					if acc > max_acc:
+						max_acc = acc
+						ddqq = '_q' if q == 'q' else ''
+						name = feature + '_' + str(classes) + '_' + str(x) + '.csv'
+						os.rename(csv_dir + name, csv_dir + 'predictions/' + name)
+				print(feature, x, "Average:", gmean(filter(lambda x: x>0, ans[feature][x]))
+		fd = open('/home/ypap/characterization/parse_results/csv/adaptivity/adapt2' + q + '.csv', mode='a+')
+		writer = csv.writer(fd, delimiter=',')
+		for x in clos:
+			row = [x]
+			for f in features:
+				row.extend([gmean(ans[f][x]), -1])
+			writer.writerow(row)
+		fd.close()
 
 def test_acc_3(iterations = 20):
 	features = ['sens', 'cont']
