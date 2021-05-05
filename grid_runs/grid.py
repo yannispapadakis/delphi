@@ -5,7 +5,8 @@ from base_config import *
 from read_file import *
 from perf_reader import *
 
-csv_dir = home_dir + 'parse_results/csv/'
+csv_dir = home_dir + 'results/'
+grid_dir = csv_dir + 'grids/'
 
 vcpus = ['1', '2', '4', '8']
 
@@ -22,7 +23,7 @@ def generate_grid(benchmarks = []):
 	return grid
 
 def read_grid(grid, name = 'grid', include = []):
-	gridfile = csv_dir + name + '.csv'
+	gridfile = grid_dir + name + '.csv'
 	try:
 		fd = open(gridfile)
 	except:
@@ -142,29 +143,8 @@ def classes(grid, qos, class_num = 2):
 		quartiles3[bench] = quartile3
 	return (clos, whiskers, quartiles3)
 
-def print_stats(grid):
-	stats = dict()
-	for bench in grid.keys():
-		if not grid[bench]: continue
-		measures = list(map(float, grid[bench].values()))
-		quartile3 = np.percentile(measures,75)
-		median = np.percentile(measures,50)
-		quartile1 = np.percentile(measures,25)
-		iqr = quartile3 - quartile1
-		whisker_lim = quartile3 + 1.5 * iqr
-		whisker = max([x for x in measures if x <= whisker_lim])
-		uisker_lim = quartile1 - 1.5 * iqr
-		uisker = min([x for x in measures if x >= uisker_lim])
-		stats[bench] = [uisker, quartile1, median, quartile3, whisker]
-	fd = open(csv_dir + 'stats.csv', 'w')
-	wr = csv.writer(fd)
-	wr.writerow(['Benchmark', 'LowerWhisker', 'Quartile1', 'Median', 'Quartile3', 'UpperWhisker'])
-	for bench in stats:
-		wr.writerow([bench] + stats[bench])
-	fd.close()
-
 def print_grid(grid, T = False, name = 'grid'):
-	out_file = csv_dir + name + "T.csv" if T else csv_dir + name + ".csv"
+	out_file = grid_dir + name + "T.csv" if T else grid_dir + name + ".csv"
 	fd = open(out_file, mode='w')
 	writer = csv.writer(fd, delimiter='\t')
 
@@ -189,7 +169,6 @@ def make_grid(feature = 'sens', qos = [1.2], class_num = 2):
 		grid = transpose_grid(grid)
 	if not ok:
 		print_grid(grid, feature == 'cont')
-	print_stats(grid)
 	return classes(grid, qos, class_num)
 
 def make_partial_grid(benchmarks, feature = 'sens', qos = [1.2], class_num = 2):

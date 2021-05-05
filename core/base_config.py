@@ -9,8 +9,8 @@ sys.path.insert(1, '/home/jim/jimsiak/actimanager')
 import Billing
 
 home_dir = '/'.join(os.getcwd().split('/')[:4]) + '/'
-pairs_dir = home_dir + 'grid_runs/results/'
-perf_dir = home_dir + 'perf_runs/results/'
+pairs_dir = home_dir + 'results/coexecutions/'
+perf_dir = home_dir + 'results/perf_runs/'
 
 silver_m = Billing.silver_money
 gold_m = Billing.gold_money
@@ -58,9 +58,6 @@ SPEC_ISOLATION = {	'459.GemsFDTD': {1: 381.0, 2: 401.0, 4: 419.75, 8: 522.625},
 					'465.tonto': {1: 621.0, 2: 376.0, 4: 253.25, 8: 250.0},
 					'483.xalancbmk': {1: 236.0, 2: 253.0, 4: 291.5, 8: 339.25},
 					'434.zeusmp': {1: 423.0, 2: 430.0, 4: 437.5, 8: 452.0}}
-
-save_graph_dir = home_dir + 'workload/results/graphs/'
-save_csv_dir = home_dir + 'workload/results/csv_outputs/'
 
 # For perVM plots
 colors = ['black', 'red', 'green', 'blue', 'magenta']

@@ -25,13 +25,20 @@ def csv_writer(measures, classes, benches, mode):
 			writer.writerow(outrow)
 	fd.close()
 
-def print_pred(answers, outfile):
+def print_pred(answers, outfile, acc):
 	fd = open(outfile,'w')
 	writer = csv.writer(fd, delimiter='\t')
 	writer.writerow(['Bench', 'Prediction', 'Real'])
+	checker = dict()
 	for x in answers:
 		(pred, real) = answers[x]
+		if (pred, real) not in checker:
+			checker[(pred, real)] = 1
+		else:
+			checker[(pred, real)] += 1
 		writer.writerow([x, pred, real])
+	last_row = ["Accuracy", str(acc) +' '+ str(checker)]
+	writer.writerow(last_row)
 	fd.close()
 
 def select_model(mod, feature):
@@ -45,12 +52,12 @@ def select_model(mod, feature):
 			return DecisionTreeClassifier(criterion='entropy',splitter='random',min_samples_leaf=2)
 		if feature == 'cont':
 			return DecisionTreeClassifier(min_samples_split=7, min_samples_leaf=5, max_features='log2')
-	if mod == 'KNeighbors':
+	if mod == 'KN':
 		if feature == 'sens':
 			return KNeighborsClassifier(n_neighbors=6, weights='distance', algorithm='ball_tree', leaf_size=15, p=3)
 		if feature == 'cont':
 			return KNeighborsClassifier(n_neighbors=7, weights='uniform', algorithm='ball_tree', leaf_size=10, p=1)
-	if mod == 'RandomForest':
+	if mod == 'RF':
 		if feature == 'sens':
 			return RandomForestClassifier(n_estimators=50, criterion='entropy', min_samples_split=9, min_samples_leaf=5, max_features='log2')
 		if feature == 'cont':
@@ -114,26 +121,31 @@ def predict(clos = [1.2] , feature = 'sens', mod = 'SVC', class_num = 2):
 		csv_writer(measures, classes, test_set, 'test')
 		acc_scores.append(run_model(answers, feature, mod))
 
-	outfile = csv_dir + feature + '_' + str(class_num) + '_' + ','.join([str(x) for x in clos]) + '.csv'
 	os.remove(csv_dir + 'train.csv')
 	os.remove(csv_dir + 'test.csv')
 	if type(mod) == str:
-		print_pred(answers, outfile)
+		outfile = csv_dir + feature + '_' + str(class_num) + '_' + ','.join([str(x) for x in clos]) + '_' + mod + '.csv'
+		print_pred(answers, outfile, np.mean(acc_scores))
 		print(feature + ' | ' + ','.join([str(x) for x in clos]) + ' | C:' + str(class_num) + ' | ' + mod + ' | ' + str(100 * round(np.mean(acc_scores), 4)) + '%')
 	return np.mean(acc_scores)
 
-if __name__ == '__main__':
-	if len(sys.argv) < 2:
-		print('Arguments: feature (sens/cont), qos (csv), number of classes (2 or 3)')
-		sys.exit(1)
-	feature = sys.argv[1]
-	mod = 'KN'
-	qos = sorted(map(float, sys.argv[2].split(',')))
-	try:
-		class_num = int(sys.argv[3])
-		if class_num != 2 and class_num != 3:
-			class_num = 2
-	except:
-		class_num = 2
+def help_message(ex):
+	msg =  "Usage:   python %s <feature> <qos> <classes> <model>\n" % ex
+	msg += "Feature: " + ' | '.join(['sens', 'cont']) + '\n'
+	msg += "QoS:     comma separated float list\n"
+	msg += "Classes: " + ' | '.join(['2', '3']) + '\n'
+	msg += "Model:   " + ' | '.join(['SVC', 'DT', 'KN', 'RF'])
+	print(msg)
+	return 0
+
+def arg_check(argv):
+	feature = argv[0]
+	qos = sorted(map(float, argv[1].split(',')))
+	class_num = int(argv[2])
+	mod = argv[3]
 	predict(qos, feature, mod, class_num)
 
+if __name__ == '__main__':
+	if len(sys.argv) < 5:
+		sys.exit(help_message(sys.argv[0]))
+	sys.exit(arg_check(sys.argv[1:]))

@@ -7,8 +7,8 @@ import pprint
 
 ########################################### PCM Parser ###########################################
 
-perf_directory = '/home/ypap/characterization/perf_runs/results/'
-csv_dir = '/home/ypap/characterization/parse_results/csv/'
+perf_directory = '/home/ypap/characterization/results/perf_runs/'
+csv_dir = '/home/ypap/characterization/results/'
 
 def pcm_measures(filename, directory):
 	fd = open(directory + filename)

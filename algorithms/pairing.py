@@ -102,7 +102,7 @@ def get_predictions(benchmarks, real, classes):
 	for f in features:
 		with open(csv_dir + f + suffix, mode='r') as pred:
 			reader = csv.reader(pred, delimiter='\t')
-			predictions[f] = dict((rows[0], rows[3 if real else 1]) for rows in reader) for rows in reader)
+			predictions[f] = dict((rows[0], rows[3 if real else 1]) for rows in reader)
 			del predictions[f]['Bench']
 			pred.close()
 	return dict((x, (int(predictions['sens'][x.split('.')[1]]), int(predictions['cont'][x.split('.')[1]]))) for x in benchmarks)

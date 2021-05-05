@@ -1,37 +1,40 @@
 from predictor import *
 from scipy.stats.mstats import gmean
 
-def test_acc_2(iterations = 20):
+def test_acc_2(iterations = 10):
 	features = ['sens', 'cont']
 	k = 8
 	tool = 'perf'
-	lim = 1.5
-	mod = 'KN'
+	lim = 1.7
 	clos = [round(0.1 * x, 1) for x in range(11, int(lim * 10 + 1))]
-	for classes in in [2, 3]:
-		ans = dict()
-		for feature in features:
-			ans[feature] = dict()
+	for mod in ['SVC', 'DT', 'KN', 'RF']:
+		for classes in [2, 3]:
+			ans = dict()
+			for feature in features:
+				ans[feature] = dict()
+				for x in clos:
+					ans[feature][x] = []
+					max_acc = 0.0
+					name = feature + '_' + str(classes) + '_' + str(x) + '_' + mod + '.csv'
+					for i in range(iterations):
+						acc = predict([x], feature, mod, classes)
+						ans[feature][x].append(acc)
+						if acc > max_acc:
+							max_acc = acc
+							os.rename(csv_dir + name, csv_dir + 'predictions/' + mod + '/' + name)
+					try:
+						os.remove(csv_dir + name)
+					except:
+						pass
+					print feature, x, "Average:", gmean(filter(lambda x: x>0, ans[feature][x]))
+			fd = open(csv_dir + 'adaptivity/' + mod + '_' + str(classes) + '.csv', mode='a+')
+			writer = csv.writer(fd, delimiter=',')
 			for x in clos:
-				ans[feature][x] = []
-				max_acc = 0.0
-				for i in range(iterations):
-					acc = predict([x], feature, mod, classes)
-					ans[feature][x].append(acc)
-					if acc > max_acc:
-						max_acc = acc
-						ddqq = '_q' if q == 'q' else ''
-						name = feature + '_' + str(classes) + '_' + str(x) + '.csv'
-						os.rename(csv_dir + name, csv_dir + 'predictions/' + name)
-				print(feature, x, "Average:", gmean(filter(lambda x: x>0, ans[feature][x]))
-		fd = open('/home/ypap/characterization/parse_results/csv/adaptivity/adapt2' + q + '.csv', mode='a+')
-		writer = csv.writer(fd, delimiter=',')
-		for x in clos:
-			row = [x]
-			for f in features:
-				row.extend([gmean(ans[f][x]), -1])
-			writer.writerow(row)
-		fd.close()
+				row = [x]
+				for f in features:
+					row.extend([gmean(ans[f][x]), -1])
+				writer.writerow(row)
+			fd.close()
 
 def test_acc_3(iterations = 20):
 	features = ['sens', 'cont']
@@ -68,6 +71,7 @@ def test_acc_3(iterations = 20):
 	fd.close()
 
 if __name__ == '__main__':
+	sys.exit(test_acc_2())
 	classes = sys.argv[1]
 	if classes == '2':
 		test_acc_2()

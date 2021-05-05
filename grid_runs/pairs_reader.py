@@ -10,13 +10,15 @@ grid = generate_grid()
 read_grid(grid)
 
 # predictor
-csv_dir = home_dir + 'parse_results/csv/'
+mod = 'SVC'
+pred_dir = home_dir + 'results/predictions/' + mod + '/'
 features = ['sens', 'cont']
-suffix = '_8_1.2.csv'
+config = ['', '2', '1.2', mod]
+suffix = '_'.join(config) + '.csv'
 
 predictions = dict()
 for f in features:
-	with open(csv_dir + f + suffix, mode='r') as pred:
+	with open(pred_dir + f + suffix, mode='r') as pred:
 		reader = csv.reader(pred, delimiter='\t')
 		predictions[f] = dict((rows[0], rows[1:]) for rows in reader)
 		pred.close()

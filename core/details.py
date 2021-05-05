@@ -25,7 +25,7 @@ def print_esd(vm, measures):
 
 def dettt():
 	ans = dict()
-	ldir = '/home/ypap/actimanager/workload/results/perf/outputs/'
+	ldir = home_dir + 'results/perf_runs/'
 	total_measures = parse_files(ldir)
 	for bench in total_measures:
 		measures = total_measures[bench]

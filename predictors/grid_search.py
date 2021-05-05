@@ -71,13 +71,14 @@ def kn_grid(fd, feat):
 	return max_kn[1]
 
 def rf_grid(fd, feat):
-	rf_n_estimators = [5 * x for x in range(4,11)]
+	rf_n_estimators = [50] #[5 * x for x in range(4,11)]
 	rf_criterion = ['gini', 'entropy']
-	rf_min_samples_split = range(4,10)
-	rf_min_samples_leaf = range(4,10)
+	rf_min_samples_split = range(2,11)
+	rf_min_samples_leaf = range(2,11)
 	rf_max_features = [None, 'sqrt', 'log2']
 	rf_bootstrap = [False, True]
 
+	max_rf = (0, '')
 	for n_estimators in rf_n_estimators:
 		for criterion in rf_criterion:
 			for min_samples_split in rf_min_samples_split:
@@ -93,7 +94,7 @@ def rf_grid(fd, feat):
 	return max_rf[1]
 
 def grid_search(m):
-	feat = 'cont'
+	feat = 'sens'
 	fd = open(feat + "_search.txt", 'w')
 	optimal = []
 

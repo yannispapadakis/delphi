@@ -6,7 +6,7 @@ from grid import *
 from scipy.stats.mstats import gmean
 
 def sensitivity(qos = 1.2, function = 'geomean'):
-	result_dir = home_dir + "perf_runs/results/attackers/"
+	result_dir = home_dir + "results/perf_runs/attackers/"
 	total_measures = parse_files(result_dir)
 	l3 = dict()
 	memBw = dict()
