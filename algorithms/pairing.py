@@ -1,4 +1,4 @@
-import random, sys, csv, itertools
+import random, sys, csv, subprocess
 import numpy as np
 from operator import itemgetter
 sys.path.append('../perf_runs/')
@@ -11,10 +11,11 @@ from matching import Player
 import pprint
 
 clos = 1.2
+report = ''
 grid = generate_grid()
 read_grid(grid)
 
-csv_dir = csv_dir + 'predictions/'
+pred_dir = csv_dir + 'predictions/'
 wd_dir = home_dir + 'algorithms/workload_pairs/' 
 
 """--------------------------- Random Pairing -----------------------------"""
@@ -58,12 +59,22 @@ def oracle(benchmarks, mode = 'real'):
 						key = itemgetter(1))))
 	return players_to_str(stable_roommates(players))
 
+def get_whiskers():
+	dicts = []
+	for feature in ['sens', 'cont']:
+		f = open(pred_dir + feature + '-stats.csv', mode = 'r')
+		reader = csv.reader(f)
+		whiskers = dict((rows[0], rows[-1]) for rows in reader)
+		del whiskers['Benchmark']
+		dicts.append(whiskers)
+		f.close()
+	return dicts
+
 def whisker(benchmarks):
 	players = [Player(x) for x in benchmarks]
 
-	sens_whiskers = classes(grid, [clos])[1]
-	cont_whiskers = classes(transpose_grid(grid), [clos])[1]
-	whiskers = dict((x, (sens_whiskers[x.name.split('.')[1]], cont_whiskers[x.name.split('.')[1]])) for x in players)
+	(sens_whiskers, cont_whiskers) = get_whiskers()
+	whiskers = dict((x, (float(sens_whiskers[x.name.split('.')[1]]), float(cont_whiskers[x.name.split('.')[1]]))) for x in players)
 	prefs = dict()
 
 	for bench in players:
@@ -95,15 +106,26 @@ def zipthem(zeros, notzeros):
 	zeros2 = zeros[len(notzeros):]
 	return list(zip(zeros1, notzeros)) + list(zip(zeros2[:int(len(zeros2) / 2)], zeros2[int(len(zeros2) / 2):]))
 
+def get_model(feature, classes):
+	accs = dict()
+	for model in ['SVC', 'DT', 'KN', 'RF']:
+		cmd = 'tail -n1 ' + pred_dir + model + '/' + '_'.join(map(str, [feature, classes, clos, model])) + '.csv'
+		last_line = subprocess.check_output(cmd, shell = True)
+		accs[model] = float(str(last_line).split('t')[1].split(' ')[0])
+	model = max(accs.items(), key = itemgetter(1))[0]
+	global report
+	report += feature + ': ' + model + ' '
+	return pred_dir + model + '/' + '_'.join(map(str, [feature, classes, clos, model])) + '.csv'
+
 def get_predictions(benchmarks, real, classes):
 	predictions = dict()
 	features = ['sens', 'cont']
-	suffix = '_' + str(clos) + '.csv' if classes == 2 else '_q_' + str(clos) + '.csv'
 	for f in features:
-		with open(csv_dir + f + suffix, mode='r') as pred:
+		with open(get_model(f, classes), mode='r') as pred:
 			reader = csv.reader(pred, delimiter='\t')
-			predictions[f] = dict((rows[0], rows[3 if real else 1]) for rows in reader)
+			predictions[f] = dict((rows[0], rows[-1 if real else 1]) for rows in reader)
 			del predictions[f]['Bench']
+			del predictions[f]['Accuracy']
 			pred.close()
 	return dict((x, (int(predictions['sens'][x.split('.')[1]]), int(predictions['cont'][x.split('.')[1]]))) for x in benchmarks)
 
@@ -173,7 +195,7 @@ def players_to_str(pairs):
 		return {}
 
 def print_results(results):
-	fd = open('/'.join(csv_dir.split('/')[:-2]) + '/' + 'violations_' + str(clos) + '.csv', 'w')
+	fd = open(csv_dir + 'violations/' + 'violations_' + str(clos) + '.csv', 'w')
 	wr = csv.writer(fd, delimiter = ',')
 	sizes = list(map(str, sorted(map(int, results.keys()))))
 	files = list(results[sizes[0]].keys())[::-1]
@@ -205,26 +227,29 @@ def decide_pairs(benchmarks, algo, real = True, classes = 2):
 	return fix_pairing(pairs)
 			
 def help_message(ex):
-	msg =  "Usage for loop:         python3 %s loop <clos>\n" % ex
-	msg += "Usage for manual:       python3 %s <workload> <algorithm> <real> <classes>\n" % ex 
-	msg += "Workload:               " + ' | '.join(list(map(lambda x: x.split('.')[0], filter(lambda x: x.endswith('csv'), os.listdir('workload_pairs/'))))) +'\n'
-	msg += "Algorithms:             " + ' | '.join(['oracle', 'forest', 'attackers', 'whisker', 'random', 'custom']) +'\n'
-	msg += "Real:    (custom only)  " + ' | '.join(['real', 'pred']) +'\n'
-	msg += "Classes: (custom only)  " + ' | '.join(['2','3']) + '\n'
+	msg =  "Usage for loop:    python3 %s loop <clos>\n" % ex
+	msg += "Usage for manual:  python3 %s <clos> <workload> <algorithm> <real> <classes>\n" % ex 
+	msg += "CLoS:              " + ' | '.join(sorted(set(map(lambda x: x.split('_')[2], os.listdir(pred_dir + 'SVC/'))))) + '\n'
+	msg += "Workload:          " + ' | '.join(list(map(lambda x: x.split('.')[0], filter(lambda x: x.endswith('csv'), os.listdir('workload_pairs/'))))) +'\n'
+	msg += "Algorithms:        " + ' | '.join(['oracle', 'forest', 'attackers', 'whisker', 'random', 'custom']) +'\n'
+	msg += "Real:    (custom)  " + ' | '.join(['real', 'pred']) +'\n'
+	msg += "Classes: (custom)  " + ' | '.join(['2','3']) 
 	print(msg)
 	return 0
 
 """------------------------------- Main -----------------------------------"""
 def manual(args):
-	bench_file = wd_dir + args[1] + '.csv'
-	algo = args[2]
+	global clos
+	clos = float(args[1])
+	bench_file = wd_dir + args[2] + '.csv'
+	algo = args[3]
 	if algo == 'custom':
 		try:
-			real = args[3] == 'real'
+			real = args[4] == 'real'
 		except:
 			real = True
 		try:
-			classes = int(args[4])
+			classes = int(args[5])
 		except:
 			classes = 2
 	else:
@@ -237,7 +262,7 @@ def manual(args):
 		benchmarks.append(benchmarks[0])
 	pairs = decide_pairs(benchmarks, algo, real, classes)
 	fd.close()
-	print(pairs)
+	print(report + ' ' + str(pairs))
 
 def loop(args):
 	global clos
