@@ -1,20 +1,20 @@
 import sys, csv, pprint, random
 
-predictions_dir = '/home/ypap/characterization/parse_results/csv/predictions/'
+predictions_dir = '/home/ypap/characterization/results/predictions/SVC/'
 
 def pred_file(mode, qos, classes):
-	return predictions_dir + mode + ('_q_' if classes == 3 else '_') + str(qos) + '.csv'
+	return predictions_dir + mode + '_' + str(classes) + '_' + str(qos) + '_SVC.csv'
 
 def benchmarks_list(qos = 1.2, classes = 3):
 	sens_file = open(pred_file('sens', qos, classes), 'r')
 	cont_file = open(pred_file('cont', qos, classes), 'r')
 
-	classes = dict((row[0], row[3]) for row in csv.reader(sens_file, delimiter = '\t'))
+	classes = dict((row[0], row[-1]) for row in csv.reader(sens_file, delimiter = '\t'))
 	classes.pop('Accuracy', None)
 	classes.pop('Bench', None)
 	for row in csv.reader(cont_file, delimiter = '\t'):
 		if row[0] == 'Bench' or row[0] == 'Accuracy': continue
-		classes[row[0]] = (int(classes[row[0]]), int(row[3]))
+		classes[row[0]] = (int(classes[row[0]]), int(row[-1]))
 	groups = dict()
 	for (bench, class_) in classes.items():
 		if bench.endswith('8'): continue
@@ -46,4 +46,4 @@ if __name__ == '__main__':
 		sys.exit(1)
 	contention = sys.argv[1]
 	size = int(sys.argv[2])
-	generate_workload(contention = contention, size = size)
+	generate_workload(1.1, contention = contention, size = size)

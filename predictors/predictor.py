@@ -6,11 +6,7 @@ from sklearn import preprocessing
 from grid import *
 from perf_reader import *
 from datetime import datetime
-
-from sklearn.svm import SVC
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.ensemble import RandomForestClassifier
+from model_selection import select_model
 
 def csv_writer(measures, classes, benches, mode):
 	out_file = csv_dir + mode + '.csv'
@@ -41,31 +37,18 @@ def print_pred(answers, outfile, acc):
 	writer.writerow(last_row)
 	fd.close()
 
-def select_model(mod, feature):
-	if mod == 'SVC':
-		if feature == 'sens':
-			return SVC(kernel='linear', C=1)
-		if feature == 'cont':
-			return SVC(kernel='linear', C=0.9)
-	if mod == 'DT':
-		if feature == 'sens':
-			return DecisionTreeClassifier(criterion='entropy',splitter='random',min_samples_leaf=2)
-		if feature == 'cont':
-			return DecisionTreeClassifier(min_samples_split=7, min_samples_leaf=5, max_features='log2')
-	if mod == 'KN':
-		if feature == 'sens':
-			return KNeighborsClassifier(n_neighbors=6, weights='distance', algorithm='ball_tree', leaf_size=15, p=3)
-		if feature == 'cont':
-			return KNeighborsClassifier(n_neighbors=7, weights='uniform', algorithm='ball_tree', leaf_size=10, p=1)
-	if mod == 'RF':
-		if feature == 'sens':
-			return RandomForestClassifier(n_estimators=50, criterion='entropy', min_samples_split=9, min_samples_leaf=5, max_features='log2')
-		if feature == 'cont':
-			return RandomForestClassifier(n_estimators=40, min_samples_split=6, min_samples_leaf=4, max_features='log2')
+def get_data_name(feature, cl, mod):
+	if type(mod) == str:
+		return feature + str(cl) + mod
+	modd = str(type(mod)).split('.')[-1].split("'")[0]
+	if modd == 'DecisionTreeClassifier': modd = 'DT'
+	if modd == 'KNeighbors': modd = 'KN'
+	if modd == 'RandomForest': modd = 'RF'
+	return feature + str(cl) + modd
 
-def run_model(answers, feature, mod = 'SVC'):
-	train_data = pd.read_csv(csv_dir + 'train.csv')
-	test_data = pd.read_csv(csv_dir + 'test.csv')
+def run_model(answers, feature, cl, qos, mod = 'SVC'):
+	train_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod) + 'train.csv')
+	test_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod) + 'test.csv')
 
 	if feature == 'cont':
 		remove_cols = [0, 2, 3, 4, 5, 6, 8, 15]
@@ -82,7 +65,7 @@ def run_model(answers, feature, mod = 'SVC'):
 	y_test = test_data['Class']
 
 	if type(mod) == str:
-		model = select_model(mod, feature)
+		model = select_model(mod, feature, cl, qos)
 	else: model = mod
 
 	train_scaled = scaler.transform(train)
@@ -112,17 +95,18 @@ def predict(clos = [1.2] , feature = 'sens', mod = 'SVC', class_num = 2):
 
 	answers = dict()
 	acc_scores = []
+	data_name = get_data_name(feature, class_num, mod)
 
 	for test_set in chunks:
 		train_chunks = [x for x in chunks if x != test_set]
 		train_set = [element for lst in train_chunks for element in lst]
 		(train_classes, _, _) = make_partial_grid(train_set, feature, clos, class_num)
-		csv_writer(measures, train_classes, train_set, 'train')
-		csv_writer(measures, classes, test_set, 'test')
-		acc_scores.append(run_model(answers, feature, mod))
+		csv_writer(measures, train_classes, train_set, data_name + 'train')
+		csv_writer(measures, classes, test_set, data_name + 'test')
+		acc_scores.append(run_model(answers, feature, class_num, clos[0], mod))
 
-	os.remove(csv_dir + 'train.csv')
-	os.remove(csv_dir + 'test.csv')
+	os.remove(csv_dir + data_name + 'train.csv')
+	os.remove(csv_dir + data_name + 'test.csv')
 	if type(mod) == str:
 		outfile = csv_dir + feature + '_' + str(class_num) + '_' + ','.join([str(x) for x in clos]) + '_' + mod + '.csv'
 		print_pred(answers, outfile, np.mean(acc_scores))

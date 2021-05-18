@@ -5,7 +5,7 @@ def test_acc_2(iterations = 10):
 	features = ['sens', 'cont']
 	k = 8
 	tool = 'perf'
-	lim = 1.7
+	lim = 1.3
 	clos = [round(0.1 * x, 1) for x in range(11, int(lim * 10 + 1))]
 	for mod in ['SVC', 'DT', 'KN', 'RF']:
 		for classes in [2, 3]:

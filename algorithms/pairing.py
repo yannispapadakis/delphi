@@ -10,7 +10,7 @@ from matching.algorithms import stable_roommates
 from matching import Player
 import pprint
 
-clos = 1.2
+clos = 1.1
 report = ''
 grid = generate_grid()
 read_grid(grid)
@@ -55,7 +55,7 @@ def oracle(benchmarks, mode = 'real'):
 						sorted([x for x in window[bench1].items() if float(x[1]) < clos], reverse = True,
 						key = itemgetter(1))))
 		bench1.prefs += list(map(lambda x: x[0],
-						sorted([x for x in window[bench1].items() if float(x[1]) > clos],
+						sorted([x for x in window[bench1].items() if float(x[1]) >= clos],
 						key = itemgetter(1))))
 	return players_to_str(stable_roommates(players))
 
