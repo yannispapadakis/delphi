@@ -5,7 +5,7 @@ predictions_dir = '/home/ypap/characterization/results/predictions/SVC/'
 def pred_file(mode, qos, classes):
 	return predictions_dir + mode + '_' + str(classes) + '_' + str(qos) + '_SVC.csv'
 
-def benchmarks_list(qos = 1.2, classes = 3):
+def benchmarks_list(qos, classes):
 	sens_file = open(pred_file('sens', qos, classes), 'r')
 	cont_file = open(pred_file('cont', qos, classes), 'r')
 
@@ -24,7 +24,7 @@ def benchmarks_list(qos = 1.2, classes = 3):
 		else: groups[index] = [bench]
 	return groups
 
-def generate_workload(qos = 1.2, classes = 3, contention = 'med', size = 40):
+def generate_workload(qos, classes, contention, size):
 	groups = benchmarks_list(qos, classes)
 	bench_list = []
 	if contention == 'low': cont = 0
@@ -45,5 +45,4 @@ if __name__ == '__main__':
 		print "Usage: python workload_generator.py <contention: low, med, high> <size>"
 		sys.exit(1)
 	contention = sys.argv[1]
-	size = int(sys.argv[2])
-	generate_workload(1.1, contention = contention, size = size)
+	generate_workload(1.3, 3, contention, 100)

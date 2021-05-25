@@ -36,42 +36,47 @@ def test_acc_2(iterations = 10):
 				writer.writerow(row)
 			fd.close()
 
-def test_acc_3(iterations = 20):
+def test_acc_3(iterations = 5):
 	features = ['sens', 'cont']
+	models = ['SVC', 'DT', 'KN', 'RF']
 	k = 8
 	tool = 'pqos'
-	lim = 1.8
+	lim = 1.4
 	clos1 = [round(0.1 * x, 1) for x in range(11, int(lim * 10 + 1))]
 	clos2 = [round(x + 0.1, 1) for x in clos1]
 	ans = dict()
 	for feature in features:
 		ans[feature] = dict()
-		for c1 in clos1:
-			ans[feature][c1] = dict()
-			for c2 in clos2:
-				if c2 - c1 < 1e-3:
-					continue
-				qos = [c1,c2]
-				ans[feature][c1][c2] = []
-				for i in range(iterations):
-					ans[feature][c1][c2].append(predict(k, qos, tool, feature))
+		for mod in models:
+			ans[feature][mod] = dict()
+			for c1 in clos1:
+				ans[feature][mod][c1] = dict()
+				for c2 in clos2:
+					if c2 - c1 < 1e-3:
+						continue
+					qos = [c1,c2]
+					ans[feature][mod][c1][c2] = []
+					for i in range(iterations):
+						ans[feature][mod][c1][c2].append(predict(qos, feature, mod))
 	
-	fd = open('csv/adaptivity/adapt3.csv', mode='a+')
+	fd = open(csv_dir + 'adaptivity/' + mod + '_2SLA.csv', mode='a+')
 	writer = csv.writer(fd, delimiter=',')
-	for c1 in clos1:
-		row = [c1]
-		for f in features:	
-			for c2 in clos2:
-				if c2 - c1 < 1e-3:
-					row.append(-1)
-				else:
-					row.append(np.mean(ans[f][c1][c2]))
-			row.append(-2)
-		writer.writerow(row)
+	for mod in models:
+		writer.writerow([mod])
+		for c1 in clos1:
+			row = [c1]
+			for f in features:
+				for c2 in clos2:
+					if c2 - c1 < 1e-3:
+						row.append(-1)
+					else:
+						row.append(np.mean(ans[f][mod][c1][c2]))
+				row.append(-2)
+			writer.writerow(row)
 	fd.close()
 
 if __name__ == '__main__':
-	sys.exit(test_acc_2())
+	sys.exit(test_acc_3())
 	classes = sys.argv[1]
 	if classes == '2':
 		test_acc_2()
