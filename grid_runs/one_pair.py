@@ -1,26 +1,27 @@
 import sys
-sys.path.append("core/")
+sys.path.append("../core/")
 from execute import *
-
+from vm_messages_monitor import *
+import pprint
 def generate_vms_list(bench_input):
 	is_gold = 1
 	benchmarks = list()
 	vms = list()
 	for (bench_name, vcpus) in bench_input:
-		bench = [x for x in benches if bench_name in x["name"]]
+		bench = [x for x in benches_vcpus.items() if bench_name in x[0]]
 
 		if len(bench) != 1:
 			logger.error("Error in benchmark name: %s", bench_name)
 			signal_handler(0, 0)
 		benchmarks.append((bench[0], vcpus))
 
-	runtime = int(math.ceil(max([b[0]['runtime_isolation'] for b in benchmarks]) / 60.0))
+	runtime = int(math.ceil(max([b[0][1]['runtime_isolation'][b[1]] for b in benchmarks]) / 60.0))
 	for (benchmark, vcpus) in benchmarks:
 		vm = dict()
 		vm['nr_vcpus'] = vcpus
 		vm['is_gold'] = is_gold
-		vm['is_noisy'] = benchmark['is_noisy']
-		vm['is_sensitive'] = benchmark['is_sensitive']
+		vm['is_noisy'] = benchmark[1]['is_noisy']
+		vm['is_sensitive'] = benchmark[1]['is_sensitive']
 		vm['bench'] = benchmark
 		vm['runtime'] = runtime
 		vms.append(vm)
@@ -65,13 +66,14 @@ if __name__ == '__main__':
 		sys.exit(1)
 
 	node = sys.argv[5]
+	print "Node: ", node
 	ret = ost_client.delete_existing_vms(prefix=node + "-")
 	logger.info("%d VMs to be deleted.", ret)
 	if ret > 0:
 		time.sleep(10)
 
 	CUSTOM_PORT = int("808" + node[-1])
-	CUSTOM_PORT = 8080
+	CUSTOM_PORT = 8084
 
 	vm_messages_monitor = VmMessagesMonitor(port=CUSTOM_PORT)
 	vm_messages_monitor.spawn_monitor_thread()

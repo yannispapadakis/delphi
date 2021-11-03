@@ -1,4 +1,5 @@
 from base_config import *
+from benchmarks import *
 from read_file import *
 import pprint
 
@@ -34,6 +35,7 @@ def dettt():
 			ans[nn] = dict()
 		for vm in measures['vms_names']:
 			spec_name = measures['vms_names'][vm].split('-')[3]
+			print spec_name
 			vcpus = measures['vms_vcpus'][vm]
 			base = SPEC_ISOLATION[spec_name][vcpus]
 			output = np.mean(measures['vm_output'][vm])

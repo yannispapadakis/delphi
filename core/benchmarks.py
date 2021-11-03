@@ -1,4 +1,166 @@
 import random, re
+benches_vcpus = {
+	"spec-400.perlbench":
+		{"is_noisy": 0, "is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 193.0, 2: 195.0, 4: 199.0, 8: 210.25}},
+	"spec-401.bzip2":
+		{"is_noisy": 0, "is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 128.0, 2: 124.5, 4: 125.5, 8: 129.125}},
+	"spec-403.gcc":
+		{"is_noisy": 0, "is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 23.0, 2: 23.0, 4: 24.0, 8: 24.625}},
+	"spec-410.bwaves":
+		{"is_noisy": 1, "is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 416.0, 2: 432.0, 4: 426.5, 8: 454.75}},
+	"spec-416.gamess":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 62.0, 2: 349.5, 4: 364.25, 8: 374.75}},
+	"spec-429.mcf":
+		{"is_noisy": 1, "is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 272.0, 2: 295.5, 4: 373.75, 8: 455.125}},
+	"spec-433.milc":
+		{"is_noisy": 0,	"is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 469.0, 2: 492.0, 4: 530.25, 8: 601.25}},
+	"spec-434.zeusmp":
+		{"is_noisy": 1,	"is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 425.0, 2: 430.0, 4: 437.5, 8: 452.0}},
+	"spec-435.gromacs":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 393.0, 2: 393.5, 4: 394.0, 8: 394.625}},
+	"spec-436.cactusADM":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 660.0, 2: 668.0, 4: 705.75, 8: 847.5}},
+	"spec-437.leslie3d":
+		{"is_noisy": 0,	"is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 325.0, 2: 343.0, 4: 366.25, 8: 442.875}},
+	"spec-444.namd":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 457.0, 2: 457.0, 4: 458.0, 8: 456.625}},
+	"spec-445.gobmk":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 82.0, 2: 82.5, 4: 84.0, 8: 82.875}},
+	"spec-447.dealII":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 372.0, 2: 373.0, 4: 374.75, 8: 376.5}},
+	"spec-450.soplex":
+		{"is_noisy": 0,	"is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 133.0, 2: 158.5, 4: 185.75, 8: 218.75}},
+	"spec-453.povray":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 182.0, 2: 183.5, 4: 183.0, 8: 183.625}},
+	"spec-454.calculix":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 892.0, 2: 892.0, 4: 893.5, 8: 893.75}},
+	"spec-456.hmmer":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 152.0, 2: 151.0, 4: 152.0, 8: 151.625}},
+	"spec-458.sjeng":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 629.0, 2: 631.5, 4: 634.25, 8: 635.125}},
+	"spec-459.GemsFDTD":
+		{"is_noisy": 1,	"is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 380.0, 2: 401.0, 4: 419.75, 8: 522.625}},
+	"spec-462.libquantum":
+		{"is_noisy": 1,	"is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 346.0, 2: 411.5, 4: 459.0,  8: 475.625}},
+	"spec-464.h264ref":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 78.0, 2: 78.0, 4: 78.0, 8: 78.625}},
+	"spec-465.tonto":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 621.0, 2: 376.0, 4: 253.25, 8: 250.0}},
+	"spec-470.lbm":
+		{"is_noisy": 1,	"is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 407.0, 2: 414.0, 4: 452.25, 8: 707.25}},
+	"spec-471.omnetpp":
+		{"is_noisy": 0,	"is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 301.0, 2: 366.5, 4: 440.5, 8: 502.5}},
+	"spec-473.astar":
+		{"is_noisy": 0, "is_sensitive": 0,
+		 "run_mode": "to_completion","openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 170.0, 2: 179.0, 4: 197.75, 8: 215.5}}, 
+	"spec-482.sphinx3":
+		{"is_noisy": 1,	"is_sensitive": 1,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 621.0, 2: 630.0, 4: 658.5, 8: 807.375}},
+	"spec-483.xalancbmk":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-image",
+		 "runtime_isolation": {1: 234.0, 2: 253.0, 4: 291.5, 8: 339.25}},
+	"parsec.blackscholes":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 257, 2: 142, 4: 82, 8: 53}},
+	"parsec.bodytrack":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 813, 2: 430, 4: 226, 8: 128}},
+	"parsec.canneal":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 327, 2: 196, 4: 125, 8: 91}},
+	"parsec.dedup":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 53, 2: 36, 4: 25, 8: 12}},
+	"parsec.facesim":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 2741, 2: 1424, 4: 761, 8: 411}},
+	"parsec.ferret":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 883, 2: 575, 4: 288, 8: 143}},
+	"parsec.fluidanimate":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 2389, 2: 1237, 4: 632, 8: 331}},
+	"parsec.freqmine":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 553, 2: 282, 4: 141, 8: 71}},
+	"parsec.streamcluster":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 1377, 2: 722, 4: 366, 8: 183}},
+	"parsec.swaptions":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 595, 2: 300, 4: 149, 8: 74}},
+	"parsec.vips":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 264, 2: 134, 4: 67, 8: 34}},
+	"parsec.x264":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
+		 "runtime_isolation": {1: 107, 2: 77, 4: 29, 8: 64}}
+}
 
 benches = [
 
@@ -15,202 +177,46 @@ benches = [
 #	 "run_mode": "fixed_time",
 #	 "openstack_image": "acticloud-image"},
 
-	{"name": "spec-400.perlbench",
-	 "is_noisy": 0,
-	  "is_sensitive": 0,
-	  "run_mode": "to_completion",
-	  "openstack_image": "acticloud-image",
-	  "runtime_isolation": 193},## The duration in seconds when run in isolation (1 vcpu)
-
-	{"name": "spec-401.bzip2",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 126},
-
-	{"name": "spec-403.gcc",
-	 "is_noisy": 0,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 24},
-
-	{"name": "spec-410.bwaves",
-	 "is_noisy": 1,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 415},
-
-	{"name": "spec-416.gamess",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 61},
-
-	{"name": "spec-429.mcf",
-	 "is_noisy": 1,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 274},
-
-	{"name": "spec-433.milc",
-	 "is_noisy": 0,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 465},
-
-	{"name": "spec-434.zeusmp",
-	 "is_noisy": 1,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 428},
-
-	{"name": "spec-435.gromacs",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 393},
-
-	{"name": "spec-436.cactusADM",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 666},
-
-	{"name": "spec-437.leslie3d",
-	 "is_noisy": 0,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 325},
-
-	{"name": "spec-444.namd",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 458},
-
-	{"name": "spec-445.gobmk",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 81},
-
-	{"name": "spec-447.dealII",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 373},
-
-	{"name": "spec-450.soplex",
-	 "is_noisy": 0,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 133},
-
-	{"name": "spec-453.povray",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 184},
-
-	{"name": "spec-454.calculix",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 900},
-
-	{"name": "spec-456.hmmer",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 152},
-
-	{"name": "spec-458.sjeng",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 630},
-
-	{"name": "spec-459.GemsFDTD",
-	 "is_noisy": 1,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 380},
-
-	{"name": "spec-462.libquantum",
-	 "is_noisy": 1,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 358},
-
-	{"name": "spec-464.h264ref",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 79},
-
-	{"name": "spec-465.tonto",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 622},
-
-	{"name": "spec-470.lbm",
-	 "is_noisy": 1,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 407},
-
-	{"name": "spec-471.omnetpp",
-	 "is_noisy": 0,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 322},
-
-	{"name": "spec-473.astar",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 169}, 
-
-	{"name": "spec-482.sphinx3",
-	 "is_noisy": 1,
-	 "is_sensitive": 1,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 630},
-
-	{"name": "spec-483.xalancbmk",
-	 "is_noisy": 0,
-	 "is_sensitive": 0,
-	 "run_mode": "to_completion",
-	 "openstack_image": "acticloud-image",
-	 "runtime_isolation": 234},
-
+	{"name": "spec-400.perlbench",	"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 193},## The duration in seconds when run in isolation (1 vcpu)
+	{"name": "spec-401.bzip2",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 126},
+	{"name": "spec-403.gcc",		"is_noisy": 0,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 24},
+	{"name": "spec-410.bwaves",		"is_noisy": 1,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 415},
+	{"name": "spec-416.gamess",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 61},
+	{"name": "spec-429.mcf",		"is_noisy": 1,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 274},
+	{"name": "spec-433.milc",		"is_noisy": 0,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 465},
+	{"name": "spec-434.zeusmp",		"is_noisy": 1,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 428},
+	{"name": "spec-435.gromacs",	"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 393},
+	{"name": "spec-436.cactusADM",	"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 666},
+	{"name": "spec-437.leslie3d",	"is_noisy": 0,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 325},
+	{"name": "spec-444.namd",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 458},
+	{"name": "spec-445.gobmk",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 81},
+	{"name": "spec-447.dealII",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 373},
+	{"name": "spec-450.soplex",		"is_noisy": 0,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 133},
+	{"name": "spec-453.povray",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 184},
+	{"name": "spec-454.calculix",	"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 900},
+	{"name": "spec-456.hmmer",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 152},
+	{"name": "spec-458.sjeng",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 630},
+	{"name": "spec-459.GemsFDTD",	"is_noisy": 1,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 380},
+	{"name": "spec-462.libquantum",	"is_noisy": 1,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 358},
+	{"name": "spec-464.h264ref",	"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 79},
+	{"name": "spec-465.tonto",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 622},
+	{"name": "spec-470.lbm",		"is_noisy": 1,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 407},
+	{"name": "spec-471.omnetpp",	"is_noisy": 0,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 322},
+	{"name": "spec-473.astar",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 169}, 
+	{"name": "spec-482.sphinx3",	"is_noisy": 1,	"is_sensitive": 1,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 630},
+	{"name": "spec-483.xalancbmk",	"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-image",	"runtime_isolation": 234},
+	{"name": "parsec.blackscholes",	"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 257},
+	{"name": "parsec.bodytrack",	"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 813},
+	{"name": "parsec.canneal",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 327},
+	{"name": "parsec.dedup",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 53},
+	{"name": "parsec.facesim",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 2741},
+	{"name": "parsec.ferret",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 883},
+	{"name": "parsec.fluidanimate",	"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 2389},
+	{"name": "parsec.freqmine",		"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 553},
+	{"name": "parsec.streamcluster","is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 1377},
+	{"name": "parsec.swaptions",	"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 595},
+	{"name": "parsec.vips",			"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 264},
+	{"name": "parsec.x264",			"is_noisy": 0,	"is_sensitive": 0,	"run_mode": "to_completion",	"openstack_image": "acticloud-parsec",	"runtime_isolation": 107},
 ]
 
 benches_per_category = []
@@ -292,6 +298,22 @@ echo "{\\"vm_uuid\\": \\"$VMUUID\\", \\"vm_seq_num\\": %(seq_num)d, \\"event\\":
        \\"time\\": \\"`date +%%F.%%T`\\"}" | nc -N 10.0.0.8 """ + str(custom_port) + """
 done
 """
+def vm_user_data_parsec_to_completion(custom_port):
+	return """
+cd /opt/parsec-benchmark/
+source env.sh
+for t in `seq 0 $((%(times_to_run)d-1))`; do
+{
+echo "EXECUTION NUMBER $t"
+parsecmgmt -a run -p %(bench)s -i native -n $((%(vcpus)d)) > log/amd64-linux.gcc/run_output.out; tail -n 10 log/amd64-linux.gcc/run_output.out | head -n 1 | ./time_conversion.py
+wait
+} &> /tmp/tosend
+echo "{\\"vm_uuid\\": \\"$VMUUID\\", \\"vm_seq_num\\": %(seq_num)d, \\"event\\": \\"heartbeat\\", \
+       \\"bench\\": \\"%(bench)s-to-completion\\", \\"vcpus\\": %(vcpus)d, \
+       \\"output\\": \\"`cat /tmp/tosend | tr \\"\\n\\" \\";\\" | tr \\"\\\\"\\" \\"^\\"`\\", \
+       \\"time\\": \\"`date +%%F.%%T`\\"}" | nc -N 10.0.0.8 """ + str(custom_port) + """
+done
+"""
 def vm_user_data_spec_fixed_time(custom_port):
 	return """
 {
@@ -341,12 +363,12 @@ echo "{\\"vm_uuid\\": \\"$VMUUID\\", \\"vm_seq_num\\": %(seq_num)d, \\"event\\":
 
 ## bench -> dict()
 def bench_get_name(bench):
-	if bench['name'] == "stress-cpu":
+	if bench[0] == "stress-cpu":
 		load = random.choice([25, 50, 75, 100])
 		bench['load'] = load
 		return "stress-cpu-" + str(load)
 	else:
-		return bench['name']
+		return bench[0]
 
 ## bench_name -> str, nvcpus -> int, output -> str
 ## returns float, the performance of the VM or -1 if the performance could not
@@ -364,7 +386,7 @@ def bench_get_perf_from_output(bench_name, nvcpus, output):
 		bogoops_value = bogoops_entry.split()[5]
 		ret = bogoops_value
 		unit = "throughput"
-	elif "spec" in bench_name:
+	elif "spec" in bench_name or "parsec" in bench_name:
 		seconds_entries = re.findall("[0-9]+ seconds", output)
 		seconds_values = map(lambda x: float(x.split()[0]), seconds_entries)
 		ret = sum(seconds_values) / len(seconds_values)
@@ -375,8 +397,8 @@ def bench_get_perf_from_output(bench_name, nvcpus, output):
 
 ## seq_num -> int, vcpus -> int, bench -> dict(), runtime -> int
 def get_vm_userdata(seq_num, vcpus, bench, runtime, times_to_run, port):
-	bench_name = bench['name']
-	bench_run_mode = bench['run_mode']
+	bench_name = bench[0]
+	bench_run_mode = bench[1]['run_mode']
 
 	report_interval = 1 * 60 # 1 minute
 	runtime *= 60
@@ -400,6 +422,10 @@ def get_vm_userdata(seq_num, vcpus, bench, runtime, times_to_run, port):
 		udata += vm_user_data_spec_to_completion(port) % \
 		                 {"seq_num": seq_num, "vcpus": vcpus,
 		                  "times_to_run": times_to_run, "bench": spec_bench}
+	elif "parsec" in bench_name:
+		udata += vm_user_data_parsec_to_completion(port) % \
+						 {"seq_num": seq_num, "vcpus": vcpus,
+						  "times_to_run": times_to_run, "bench": bench_name}
 	elif "tailbench-" in bench_name:
 		tailbench = bench_name.split("-")[1]
 		udata += vm_user_data_tailbench_fixed_time(port) % \

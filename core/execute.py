@@ -16,7 +16,7 @@ logger = logging.getLogger("executor")
 ost_client = OpenstackClient()
 
 def get_image_by_bench(bench):
-	img_name = bench['openstack_image']
+	img_name = bench[1]['openstack_image']
 	for img in ost_client.get_images():
 		if img_name in img.name:
 			return img
@@ -34,10 +34,12 @@ def spawn_vm(seq_num, vm_chars, wait_until_finished, node, port):
 	is_sensitive = vm_chars['is_sensitive']
 	bench = vm_chars['bench']
 	runtime = vm_chars['runtime']
-	run_mode = bench['run_mode']
+	run_mode = bench[1]['run_mode']
 
 	gold_str = "gold" if is_gold else "silver"
 	flavor_name = "acticloud." + str(vcpus) + "core." + gold_str
+	if "parsec" in bench[0] or "splash2x" in bench[0]:
+		flavor_name = "ypap." + str(vcpus) + "core"
 	flavor = ost_client.get_flavor_by_name(flavor_name)
 	bench_name = bench_get_name(bench)
 
@@ -45,7 +47,7 @@ def spawn_vm(seq_num, vm_chars, wait_until_finished, node, port):
 	if run_mode == "fixed_time":
 		run_mode += "-" + str(runtime)
 	elif run_mode == "to_completion":
-		runtime_isolation = bench['runtime_isolation']
+		runtime_isolation = bench[1]['runtime_isolation'][vcpus]
 		times_to_run = (runtime * 60.0) / runtime_isolation
 		bench_name += "-%d_times" % times_to_run
 	vm_name = node + "-" + gold_str + "-" + bench_name + "-" + run_mode

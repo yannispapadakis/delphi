@@ -1,4 +1,5 @@
 from base_config import *
+from benchmarks import *
 
 def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold_vms, vms_hosts, \
 			  vms_names, vms_cost_function, vms_vcpus, vm_times_completed, vm_uuid, \
@@ -115,7 +116,10 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 						perf = perf_sum / vcpus
 					elif "spec-" in bench:
 						spec_name = bench.split("-")[1]
-						base_perf = SPEC_ISOLATION[spec_name][vcpus]
+						try:
+							base_perf = benches_vcpus[spec_name]['runtime_isolation'][vcpus]
+						except:
+							base_perf = benches_vcpus['spec-' + spec_name]['runtime_isolation'][vcpus]
 						seconds_sum = 0.0
 						seconds_samples = 0
 						seconds_list = list()
@@ -205,7 +209,11 @@ def perf_and_income(vm_perfs, vm_names, vms_cost_function, gold_vms, vm_total, v
 		duration_mins = duration / 60.0
 		if 'to_completion' in tokens:
 			spec_name = tokens[3]
-			base_time = SPEC_ISOLATION[spec_name][vcpus]
+#			base_time = SPEC_ISOLATION[spec_name][vcpus]
+			try:
+				base_time = benches_vcpus[spec_name]['runtime_isolation'][vcpus]
+			except:
+				base_time = benches_vcpus['spec-' + spec_name]['runtime_isolation'][vcpus]
 			duration = sum([base_time * x for x in vm_perfs[vm]])
 			duration_mins = duration / 60.0
 			vm_mean_perf[vm] = min(duration / (base_time * times), np.mean(vm_perfs[vm]))
@@ -235,7 +243,11 @@ def isolation_income(vms_names, vms_vcpus, vm_total_opt, vm_times_completed):
 			vm_total_opt[vm] = rate * int(time) * vcpus
 		if 'spec' in tokens:
 			spec_name = tokens[3]
-			base_time = SPEC_ISOLATION[spec_name][vcpus]
+#			base_time = SPEC_ISOLATION[spec_name][vcpus]
+			try:
+				base_time = benches_vcpus[spec_name]['runtime_isolation'][vcpus]
+			except:
+				base_time = benches_vcpus['spec-' + spec_name]['runtime_isolation'][vcpus]
 			times = vm_times_completed[vm]
 			time = (times * base_time) / 60.0
 			rate = userfacing(is_gold, 1.0) if is_gold else batch(1.0)
@@ -303,4 +315,4 @@ def parse_files(ld = pairs_dir, endswith = '.txt'):
 			print("From file: " + f[0] + "\n\tVMs removed: " + str(f[1]))
 	return total_measures
 
-#total_measures = parse_files()
+total_measures = parse_files(pairs_dir + '/astar/1vs1/')

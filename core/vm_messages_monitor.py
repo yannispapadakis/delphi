@@ -33,7 +33,10 @@ class VmMessagesMonitor():
 						data += new_data
 					self.logger.info("EVENT: %s", data.strip())
 
-					json_data = json.loads(data)
+					try:
+						json_data = json.loads(data)
+					except:
+						print 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 					if "event" in json_data:
 						event = json_data["event"]
 						if event == "heartbeat":

@@ -28,6 +28,7 @@ def get_pid_from_vm_id(vm, node):
 	pid = shell_command.run_shell_command(command).strip()
 	return pid
 
+import pprint
 def run_perf_vm(vms, node, port, tool):
 	if len(vms) > 1:
 		logger.info("More than one VM provided, exiting.")
@@ -42,7 +43,7 @@ def run_perf_vm(vms, node, port, tool):
 		ret = pin_vcpus(vm_instance, vm['nr_vcpus'], node)
 		logger.info("======> vcpus pinned, starting " + tool)
 
-	output_file = perf_dir + vm['bench']['name'].split('-')[1] + '-' + str(vm['nr_vcpus']) +".csv"
+	output_file = perf_dir + vm['bench'][0] + '-' + str(vm['nr_vcpus']) +".csv"
 	
 	interval = 1 # seconds, adjust accordingly
 
@@ -77,11 +78,11 @@ def run_perf_vm(vms, node, port, tool):
 	except:
 		logger.info("==!!==> Did not find pid of %s" % tool)
 	if remote_pid == -1:
-		logger.info("==!!==> Error, will not be albe to kill remote pid")
+		logger.info("==!!==> Error, will not be able to kill remote pid")
 		kill_str = "ls"
 	else:
 		kill_str = 'ssh ' + node + ' "kill -2 ' + str(remote_pid) + '"'
-	expected_runtime = int(vm['bench']['runtime_isolation'])
+	expected_runtime = int(vm['bench'][1]['runtime_isolation'][vm['nr_vcpus']])
 	time.sleep(expected_runtime - 5)
 	times = 0
 	while vm_instance.status == "ACTIVE":
