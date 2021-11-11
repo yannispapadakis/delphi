@@ -4,10 +4,12 @@ from scipy.stats.mstats import gmean
 from collections import OrderedDict
 from operator import add
 import pprint
+sys.path.append('../core/')
+from read_file import *
 
 ########################################### PCM Parser ###########################################
 
-perf_directory = '/home/ypap/characterization/results/perf_runs/'
+perf_directory = '/home/ypap/characterization/results/isolation_runs/'
 csv_dir = '/home/ypap/characterization/results/'
 
 def pcm_measures(filename, directory):
@@ -87,7 +89,7 @@ def read_pqos_files(pqos_file):
 	pqos_measures = dict()
 	for row in rd:
 		if row[0] == 'Time':
-			events = map(lambda x: x.lower(), row[2:])
+			events = list(map(lambda x: x.lower(), row[2:]))
 			for event in events:
 				pqos_measures[event] = []
 		else:
@@ -114,14 +116,26 @@ def read_pqos_file(filename, directory):
 
 ########################################## Perf Parser ############################################
 
-def read_perf_file(filename, directory):
+def read_perf_file(filename, directory, run_periods):
 	measures = OrderedDict()
 	with open(directory + filename) as perf_f:
 		name = filename.split('.')[1]
 		line = perf_f.readline()
 		while line:
 			tokens = line.split()
-			if len(tokens) == 0 or tokens[0] == '#' or '<not' in tokens:
+			if len(tokens) == 0:
+				line = perf_f.readline()
+				continue
+			if tokens[0] == '#' or '<not' in tokens or 'counted>' in tokens:
+				if tokens[1] == 'started':
+					start_t = datetime.datetime.strptime(' '.join(tokens[4:]), "%b %d %H:%M:%S %Y")
+					if filename.startswith('parsec'):
+						start_t = start_t - datetime.timedelta(hours=2)
+					start_t = int(start_t.strftime("%s"))
+				line = perf_f.readline()
+				continue
+			time = int(tokens[0].split('.')[0]) + start_t
+			if time < run_periods[0] or time > run_periods[1]:
 				line = perf_f.readline()
 				continue
 			event = tokens[2]
@@ -177,13 +191,13 @@ def mpki_calculation(all_measures):
 
 def attach_pqos(all_measures):
 	pqos_files = os.listdir(perf_directory + 'pqos/')
-	for pqos_file in pqos_files:
+	for pqos_file in list(filter(lambda x: x.endswith('csv'), pqos_files)):
 		pqos_f = open(perf_directory + 'pqos/' + pqos_file, 'r')
 		rd = csv.reader(pqos_f)
 		pqos_measures = dict()
 		for row in rd:
 			if row[0] == 'Time':
-				events = map(lambda x: x.lower(), row[2:])
+				events = list(map(lambda x: x.lower(), row[2:]))
 				for event in events:
 					pqos_measures[event] = []
 			else:
@@ -204,13 +218,12 @@ def perf_files(tool = 'pqos'):
 	all_measures = dict()
 	if tool == 'pqos':
 		all_measures['Title'] = ['Benchmark', 'IPC', 'LLC_Misses', 'LLC', 'MBL', 'MBR', 'Vcpus', 'Class']
-		for f in files:
+		for f in list(filter(lambda x: x.endswith('csv'), files)):
 			bench = f.split('.')[1]
 			measures = read_pqos_files(f)
 			for event in measures:
 				measures[event] = np.mean(measures[event])
-			all_measures[bench] = [bench] + measures.values() + [int(bench.split('-')[1])]
-			break
+			all_measures[bench] = [bench] + list(measures.values()) + [int(bench.split('-')[1])]
 	elif tool == 'pcm':
 		for f in files:
 			m = read_pcm_file(f, directory)
@@ -219,8 +232,9 @@ def perf_files(tool = 'pqos'):
 			all_measures[m['Benchmark']] = m.values()
 	elif tool == 'perf':
 		final_title = []
-		for f in files:
-			measures = read_perf_file(f, directory)
+		run_periods = time_cleanup('perf')
+		for f in list(filter(lambda x: x.endswith('csv'), files)):
+			measures = read_perf_file(f, directory, run_periods[f.split('.')[1]])
 			if final_title == []: final_title = measures.keys()
 			elif final_title != measures.keys(): print("Title error on:", f)
 			all_measures[f.split('.')[1]] = measures
@@ -242,7 +256,13 @@ def perf_files(tool = 'pqos'):
 			all_measures['Title'] = ['Benchmark'] + final_title + final_title + ['Slowdown']
 	return all_measures
 
+def time_cleanup(tool = 'perf'):
+	directory = perf_directory + tool + '/outputs/'
+	total_measures = parse_files(directory)
+	run_periods = dict()
+	for f in total_measures:
+		run_periods[f.split('-')[0].replace('_','-')] = (min(total_measures[f]['vm_event_times'][0]), max(total_measures[f]['vm_event_times'][0]))
+	return run_periods
+
 if __name__ == '__main__':
 	measures = perf_files(sys.argv[1])
-	pprint.pprint(measures)
-	pprint.pprint(measures['Title'])

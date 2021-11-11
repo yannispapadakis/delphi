@@ -76,6 +76,7 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 						continue
 					if limit_heartbeats == 1: limit_heartbeats = 2
 					vm_times_completed[vm_seq_num] += 1
+					vm_event_times[vm_seq_num].append(event_epoch)
 					bench = json_data['bench']
 					load = 0 if bench != "stress-cpu" else json_data['load']
 					output = json_data['output']
@@ -114,8 +115,9 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 							line = fp.readline()
 							continue
 						perf = perf_sum / vcpus
-					elif "spec-" in bench:
-						spec_name = bench.split("-")[1]
+					elif "spec-" in bench or "parsec" in bench:
+						spec_name = bench.split("-")[0]
+						if "spec-" in bench: spec_name = bench.split("-")[1]
 						try:
 							base_perf = benches_vcpus[spec_name]['runtime_isolation'][vcpus]
 						except:
@@ -125,8 +127,8 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 						seconds_list = list()
 						for l in output_lines:
 							if 'seconds' in l:
-								seconds_list.append(int(l.split()[0]))
-								seconds_sum += int(l.split()[0])
+								seconds_list.append(float(l.split()[0]))
+								seconds_sum += float(l.split()[0])
 								seconds_samples += 1
 						if seconds_samples == 0:
 							if vm_seq_num not in excluded:
@@ -141,15 +143,14 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 						vm_output[vm_seq_num].append(tuple(seconds_list))
 						perf = (seconds_sum / seconds_samples) / base_perf
 
-					if not "spec-" in bench: ## Spec is fixed above
-						perf = perf / base_perf
+#					if not "spec-" in bench: ## Spec is fixed above
+#						perf = perf / base_perf
 					if perf == 0:
 						if vm_seq_num not in excluded:
 							excluded.append(vm_seq_num)
 						line = fp.readline()
 						continue
 					vm_perfs[vm_seq_num].append(perf if perf > 1 else 1.0)
-					vm_event_times[vm_seq_num].append(event_epoch)
 					vm_times_str[vm_seq_num].append(event_str)
 
 			except ValueError:
@@ -208,7 +209,8 @@ def perf_and_income(vm_perfs, vm_names, vms_cost_function, gold_vms, vm_total, v
 		duration = time_axis[-1] - time_axis[0]
 		duration_mins = duration / 60.0
 		if 'to_completion' in tokens:
-			spec_name = tokens[3]
+			spec_name = tokens[2]
+			if "spec" in tokens: spec_name = tokens[3]
 #			base_time = SPEC_ISOLATION[spec_name][vcpus]
 			try:
 				base_time = benches_vcpus[spec_name]['runtime_isolation'][vcpus]

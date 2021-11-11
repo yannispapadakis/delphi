@@ -8,6 +8,7 @@ sys.path.append('/home/ypap/actimanager/common/')
 import shell_command
 
 perf_dir = "/home/ypap/measurements-pqos/"
+TOOL_STARTUP = 7
 
 def pin_vcpus(vm, vcpus, node):
 	try:
@@ -28,7 +29,6 @@ def get_pid_from_vm_id(vm, node):
 	pid = shell_command.run_shell_command(command).strip()
 	return pid
 
-import pprint
 def run_perf_vm(vms, node, port, tool):
 	if len(vms) > 1:
 		logger.info("More than one VM provided, exiting.")
@@ -49,7 +49,7 @@ def run_perf_vm(vms, node, port, tool):
 
 	if tool == 'pqos':
 		cores = "[0-" + str(vm['nr_vcpus'] - 1) + "]" if vm['nr_vcpus'] - 1 > 0 else "0"
-		tool_cmd = "pqos -m all:" + cores + ' -r -o ' + output_file + ' -u csv -i ' + str(interval * 10)
+		tool_cmd = "pqos -m all:" + cores + ' -r -o ' + output_file + ' -u csv -i ' + str(interval * 10) + ' &'
 	elif tool == 'pcm':
 		cores = ','.join([str(x) for x in range(int(vm['nr_vcpus']))])
 		tool_cmd = "/home/ypap/pcm/pcm.x 1 -ns -nsys -yc " + cores + " -csv=" + output_file
@@ -60,30 +60,21 @@ def run_perf_vm(vms, node, port, tool):
 		events = 'instructions,cycles,branch-instructions,branch-misses,LLC-load-misses,LLC-store-misses,dTLB-load-misses,dTLB-store-misses,iTLB-load-misses,L1-dcache-load-misses,L1-icache-load-misses,l2_rqsts.miss'
 		tool_cmd = "perf kvm --guest stat -e " + events + " -I " + str(interval * 1000) +\
 					" -o " + output_file + " -p " + pid
-	ssh_cmd = 'ssh ' + node + ' "' + tool_cmd + '" &'
-	os.system(ssh_cmd)
-	time.sleep(5)
-	remote_pid = subprocess.check_output('ssh ' + node + ' "ps -ef | grep %s"' % tool, shell = True)
-	local_pid = subprocess.check_output('ps -ef | grep %s' % tool, shell = True)
-	try:
-		if tool == 'pqos': lookup = "pqos -m"
-		elif tool == 'pcm': lookup = "pcm.x"
-		elif tool == 'perf': lookup = "perf kvm"
+	os.system(tool_cmd)
+	time.sleep(TOOL_STARTUP)
 
-		remote_pid = int(filter(lambda y: not y == '', \
-						 filter(lambda x: lookup in x, remote_pid.split("\n"))[0].split(' '))[1])
+	if tool == 'pqos': lookup = "pqos -m"
+	elif tool == 'pcm': lookup = "pcm.x"
+	elif tool == 'perf': lookup = "perf kvm"
+	local_pid = subprocess.check_output('ps -ef | grep "%s"' % lookup, shell = True)
+	try:
 		local_pid = int(filter(lambda y: not y == '', \
 						filter(lambda x: lookup in x, local_pid.split("\n"))[0].split(' '))[1])
-		logger.info("======> %s has started, remote pid is %d, local pid is %d", tool, remote_pid, local_pid)
+		logger.info("======> %s has started, PID is %d", tool, local_pid)
 	except:
 		logger.info("==!!==> Did not find pid of %s" % tool)
-	if remote_pid == -1:
-		logger.info("==!!==> Error, will not be able to kill remote pid")
-		kill_str = "ls"
-	else:
-		kill_str = 'ssh ' + node + ' "kill -2 ' + str(remote_pid) + '"'
 	expected_runtime = int(vm['bench'][1]['runtime_isolation'][vm['nr_vcpus']])
-	time.sleep(expected_runtime - 5)
+	time.sleep(expected_runtime - TOOL_STARTUP)
 	times = 0
 	while vm_instance.status == "ACTIVE":
 		time.sleep(1)
@@ -93,11 +84,8 @@ def run_perf_vm(vms, node, port, tool):
 			logger.info("Stuck VM, exiting.")
 			break
 	try:
-		os.system(kill_str)
-	except:
-		logger.info("Did not kill remote %s, already finished" % tool)
-	try:
 		os.kill(local_pid, 15)
+		logger.info("Successfully killed " + tool + " (PID: %d)" % local_pid)
 	except:
 		logger.info("Did not kill local %s, already finished" % tool)
 
