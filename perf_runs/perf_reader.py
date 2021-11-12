@@ -83,7 +83,7 @@ def read_pcm_file(filename, directory):
 
 ########################################## PQOS Parser ############################################
 
-def read_pqos_files(pqos_file):
+def read_pqos_files(pqos_file, run_periods):
 	pqos_f = open(perf_directory + 'pqos/' + pqos_file, 'r')
 	rd = csv.reader(pqos_f)
 	pqos_measures = dict()
@@ -93,26 +93,14 @@ def read_pqos_files(pqos_file):
 			for event in events:
 				pqos_measures[event] = []
 		else:
+			time = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") - datetime.timedelta(hours=2)
+			time = int(time.strftime("%s"))
+			if time < run_periods[0] or time > run_periods[1]:
+				continue
 			measure = row[2:]
-			for (i, event) in enumerate(events):
+			for (i, event) in list(enumerate(events)):
 				pqos_measures[event].append(float(measure[i]))
 	return pqos_measures
-
-def read_pqos_file(filename, directory):
-	with open(directory + filename) as csvf:
-		name = filename.split('.')[1]
-		vcpus = float(name.split('-')[1])
-		rowread = csv.reader(csvf, delimiter=',')
-		(ipc, misses, llc, mbl, mbr, n) = (0, 0, 0, 0, 0, 0)
-		measures = [0, 0, 0, 0, 0, 0]
-		for row in rowread:
-			if row[0] == 'Time':
-				continue
-			instance = map(float, row[2:] + [1])
-			measures = map(add, measures, instance)
-		measures = map(lambda x: x / measures[-1], measures)
-		csvf.close()
-	return [filename.split('.')[1]] + measures[:-1] + [vcpus]
 
 ########################################## Perf Parser ############################################
 
@@ -218,9 +206,10 @@ def perf_files(tool = 'pqos'):
 	all_measures = dict()
 	if tool == 'pqos':
 		all_measures['Title'] = ['Benchmark', 'IPC', 'LLC_Misses', 'LLC', 'MBL', 'MBR', 'Vcpus', 'Class']
+		run_periods = time_cleanup('pqos')
 		for f in list(filter(lambda x: x.endswith('csv'), files)):
 			bench = f.split('.')[1]
-			measures = read_pqos_files(f)
+			measures = read_pqos_files(f, run_periods[bench])
 			for event in measures:
 				measures[event] = np.mean(measures[event])
 			all_measures[bench] = [bench] + list(measures.values()) + [int(bench.split('-')[1])]

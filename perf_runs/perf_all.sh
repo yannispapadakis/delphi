@@ -28,12 +28,11 @@ node="1"
 tool="pqos"
 
 benchmarks="astar,bzip2,bwaves,cactusADM,calculix,dealII,gamess,gcc,GemsFDTD,gobmk,gromacs,h264ref,hmmer,lbm,leslie3d,libquantum,mcf,milc,namd,omnetpp,perlbench,povray,sjeng,soplex,sphinx3,tonto,xalancbmk,zeusmp"
-#benchmarks="blackscholes,bodytrack,canneal,dedup,facesim,ferret,fluidanimate,freqmine,streamcluster,swaptions,vips,x264"
+benchmarks="blackscholes,bodytrack,canneal,dedup,facesim,ferret,fluidanimate,freqmine,streamcluster,swaptions,vips,x264"
 IFS=',' read -r -a benches <<< "$benchmarks"
 
 for vm in ${benches[@]}; do
-	#vcpus_str="1,2,4,8"
-	vcpus_str="1,2,4"
+	vcpus_str="1,2,4,8"
 	IFS=',' read -r -a vcpus <<< "$vcpus_str"
 	for v in ${vcpus[@]}; do
 		run_perf $vm $v $node $tool
