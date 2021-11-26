@@ -51,7 +51,7 @@ on_exit()
 }
 trap on_exit EXIT
 
-nodes="3,4"
+nodes="1"
 IFS=',' read -r -a nd <<< "$nodes"
 for i in ${nd[@]}; do
 	clear_openstack_vms $i

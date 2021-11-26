@@ -2,7 +2,7 @@ import sys
 sys.path.append("../core/")
 from execute import *
 from vm_messages_monitor import *
-import pprint
+
 def generate_vms_list(bench_input):
 	is_gold = 1
 	benchmarks = list()
@@ -15,7 +15,7 @@ def generate_vms_list(bench_input):
 			signal_handler(0, 0)
 		benchmarks.append((bench[0], vcpus))
 
-	runtime = int(math.ceil(max([b[0][1]['runtime_isolation'][b[1]] for b in benchmarks]) / 60.0))
+	runtime = 2 * int(math.ceil(max([b[0][1]['runtime_isolation'][b[1]] for b in benchmarks]) / 60.0))
 	for (benchmark, vcpus) in benchmarks:
 		vm = dict()
 		vm['nr_vcpus'] = vcpus
@@ -61,12 +61,11 @@ def run_benchmarks(vms, node, port, seq_num = 0, wait = True):
 	return vm_uuids
 
 if __name__ == '__main__':
-	if len(sys.argv) != 6:
-		logger.error("Usage: %s <Benchmark 1> <vcpus> <Benchmark 2> <vcpus> <node>", sys.argv[0])
+	if len(sys.argv) != 5:
+		logger.error("Usage: %s <Benchmark 1> <vcpus> <Benchmark 2> <vcpus>", sys.argv[0])
 		sys.exit(1)
 
-	node = sys.argv[5]
-	print "Node: ", node
+	node = 'acticloud1' #sys.argv[5]
 	ret = ost_client.delete_existing_vms(prefix=node + "-")
 	logger.info("%d VMs to be deleted.", ret)
 	if ret > 0:

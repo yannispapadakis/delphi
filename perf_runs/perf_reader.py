@@ -145,15 +145,15 @@ def apply_mean(all_measures):
 		if bench == 'Title': continue
 		measures = all_measures[bench]
 		for event in measures:
-			#measures[event] = np.mean(measures[event])
-			measures[event] = gmean(list(filter(lambda x: x > 0, measures[event])))
+			measures[event] = np.mean(list(measures[event]))
+			#measures[event] = gmean(list(filter(lambda x: x > 0, measures[event])))
 
 def perf_to_csv(measures, name):
 	out_file = open(csv_dir + 'perf_csv/' + name + '_perf.csv', 'w')
 	writer = csv.writer(out_file)
 	events = measures.keys()
 	writer.writerow(events)
-	for i in range(max(map(len, measures.values()))):
+	for i in range(max(map(len, list(measures.values())))):
 		row = []
 		for key in events:
 			try:
@@ -166,20 +166,22 @@ def perf_to_csv(measures, name):
 def mpki_calculation(all_measures):
 	for bench in all_measures:
 		measures = all_measures[bench]
-		measures['branch-misses'] = map(lambda x: (float(x[0]) / x[1]) if x[1] > 0 else 0,
-									list(zip(measures['branch-misses'], measures['branch-instructions'])))
-		measures['dTLB-misses'] = map(sum, list(zip(measures['dTLB-load-misses'], measures['dTLB-store-misses'])))
+		measures['branch-misses'] = list(map(lambda x: (float(x[0]) / x[1]) if x[1] > 0 else 0,
+									list(zip(measures['branch-misses'], measures['branch-instructions']))))
+		measures['dTLB-misses'] = list(map(sum, list(zip(measures['dTLB-load-misses'], measures['dTLB-store-misses']))))
 		measures.pop('dTLB-load-misses')
 		measures.pop('dTLB-store-misses')
 		for event in [x for x in measures if 'miss' in x and 'branch' not in x]:
-			measures[event] = map(lambda x: (x[0] * 1000.0 / x[1]) if x[1] > 0 else 0,
-									list(zip(measures[event], measures['instructions'])))
+			measures[event] = list(map(lambda x: (x[0] * 1000.0 / x[1]) if x[1] > 0 else 0,
+									list(zip(measures[event], measures['instructions']))))
 		measures.pop('branch-instructions')
 		measures.pop('instructions')
 
 def attach_pqos(all_measures):
+	run_periods = time_cleanup('pqos')
 	pqos_files = os.listdir(perf_directory + 'pqos/')
 	for pqos_file in list(filter(lambda x: x.endswith('csv'), pqos_files)):
+		bs = ae = alll = 0
 		pqos_f = open(perf_directory + 'pqos/' + pqos_file, 'r')
 		rd = csv.reader(pqos_f)
 		pqos_measures = dict()
@@ -189,8 +191,12 @@ def attach_pqos(all_measures):
 				for event in events:
 					pqos_measures[event] = []
 			else:
+				time = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") - datetime.timedelta(hours=2)
+				time = int(time.strftime("%s"))
+				if time < run_periods[pqos_file.split('.')[1]][0] or time > run_periods[pqos_file.split('.')[1]][1]:
+					continue
 				measure = row[2:]
-				for (i, event) in enumerate(events):
+				for (i, event) in list(enumerate(events)):
 					pqos_measures[event].append(float(measure[i]))
 		for event in pqos_measures:
 			all_measures[pqos_file.split('.')[1]][event] = pqos_measures[event]
@@ -232,7 +238,6 @@ def perf_files(tool = 'pqos'):
 			mpki_calculation(all_measures)
 			apply_mean(all_measures)
 			for bench in all_measures:
-			#	perf_to_csv(all_measures[bench],bench)
 				final_title = list(all_measures[bench].keys())
 				all_measures[bench] = [bench] + list(all_measures[bench].values())
 			all_measures['Title'] = ['Benchmark'] + final_title + ['Class']
