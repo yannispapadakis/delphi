@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import random, sys, csv, subprocess
 import numpy as np
 from operator import itemgetter
@@ -106,16 +107,16 @@ def zipthem(zeros, notzeros):
 	zeros2 = zeros[len(notzeros):]
 	return list(zip(zeros1, notzeros)) + list(zip(zeros2[:int(len(zeros2) / 2)], zeros2[int(len(zeros2) / 2):]))
 
-def get_model(feature, classes):
+def get_model(feature, classes, qos = clos):
 	accs = dict()
 	for model in ['SVC', 'DT', 'KN', 'RF']:
-		cmd = 'tail -n1 ' + pred_dir + model + '/' + '_'.join(map(str, [feature, classes, clos, model])) + '.csv'
+		cmd = 'tail -n1 ' + pred_dir + model + '/' + '_'.join(map(str, [feature, classes, qos, model])) + '.csv'
 		last_line = subprocess.check_output(cmd, shell = True)
 		accs[model] = float(str(last_line).split('t')[1].split(' ')[0])
 	model = max(accs.items(), key = itemgetter(1))[0]
 	global report
 	report += feature + ': ' + model + ' '
-	return pred_dir + model + '/' + '_'.join(map(str, [feature, classes, clos, model])) + '.csv'
+	return pred_dir + model + '/' + '_'.join(map(str, [feature, classes, qos, model])) + '.csv'
 
 def get_predictions(benchmarks, real, classes):
 	predictions = dict()
@@ -300,7 +301,7 @@ def loop(args):
 				results[size][_file][algo] = np.mean(violations)
 			bench_f.close()
 	print_results(results)
-	
+
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
 		sys.exit(help_message(sys.argv[0]))
