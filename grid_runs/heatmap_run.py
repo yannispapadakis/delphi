@@ -87,8 +87,8 @@ def get_vm_commands(seq_num, vm_chars, port, fill_in = False):
 	if not fill_in:
 		udata = vm_header % {"seq_num": seq_num, "port": port}
 	if "spec-" in bench_name:
-		if "calculix" in bench_name:
-			udata += vm_calculix
+#		if "calculix" in bench_name:
+#			udata += vm_calculix
 		spec_bench = bench_name.split('-')[1]
 		if fill_in:
 			udata += spec_extra % {"bench": spec_bench, "vcpus": vcpus}

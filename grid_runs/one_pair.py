@@ -15,7 +15,7 @@ def generate_vms_list(bench_input):
 			signal_handler(0, 0)
 		benchmarks.append((bench[0], vcpus))
 
-	runtime = 2 * int(math.ceil(max([b[0][1]['runtime_isolation'][b[1]] for b in benchmarks]) / 60.0))
+	runtime = int(math.ceil(max([b[0][1]['runtime_isolation'][b[1]] for b in benchmarks]) / 60.0))
 	for (benchmark, vcpus) in benchmarks:
 		vm = dict()
 		vm['nr_vcpus'] = vcpus
