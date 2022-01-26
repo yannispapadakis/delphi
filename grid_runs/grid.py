@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import sys
 sys.path.append('../core/')
 sys.path.append('../perf_runs/')
@@ -49,7 +50,10 @@ def read_grid(grid, name = 'grid', include = []):
 					if int(v1) + int(v2) > 10 or int(v1) > int(v2):
 						continue
 					search_dir = pairs_dir + b1 + '/' + v1 + 'vs' + v2 + '/'
-					files = os.listdir(search_dir)
+					try:
+						files = os.listdir(search_dir)
+					except:
+						continue
 					fname = b1 + '_' + v1 + '-' + b2 + '_' + v2 + '.txt'
 					if fname in files or fname.replace('-','.') in files:
 						new_files.append(fname)
@@ -69,18 +73,20 @@ def fill_missing(grid, dirs):
 	for directory in dirs:
 		total_measures = parse_files(directory)
 		for f in total_measures:
-				measures = total_measures[f]
-				try:
-					(name_0, name_1) = (measures['vms_names'][0], measures['vms_names'][1])
-				except KeyError:
-					print(file_)
-				name_0 = name_0.split('-')[3].split('.')[1]
-				name_1 = name_1.split('-')[3].split('.')[1]
-				(vcpus_0, vcpus_1) = (str(measures['vms_vcpus'][0]), str(measures['vms_vcpus'][1]))
-				bench1 = name_0 + '-' + vcpus_0
-				bench2 = name_1 + '-' + vcpus_1
-				grid[bench1][bench2] = measures['vm_mean_perf'][0]
-				grid[bench2][bench1] = measures['vm_mean_perf'][1]
+			measures = total_measures[f]
+			try:
+				(name_0, name_1) = (measures['vms_names'][0], measures['vms_names'][1])
+			except KeyError:
+				print(measures['vms_names'])
+				print(f)
+				continue
+			name_0 = name_0.split('-')[3].split('.')[1]
+			name_1 = name_1.split('-')[3].split('.')[1]
+			(vcpus_0, vcpus_1) = (str(measures['vms_vcpus'][0]), str(measures['vms_vcpus'][1]))
+			bench1 = name_0 + '-' + vcpus_0
+			bench2 = name_1 + '-' + vcpus_1
+			grid[bench1][bench2] = measures['vm_mean_perf'][0]
+			grid[bench2][bench1] = measures['vm_mean_perf'][1]
 
 def calculate_grid(grid):
 	dirs = []
@@ -90,6 +96,7 @@ def calculate_grid(grid):
 		combinations = os.listdir(bench_dir)
 		for combination in combinations:
 			dd = bench_dir + combination + '/'
+			if len(os.listdir(dd)) == 0: continue
 			if dd not in dirs:
 				dirs.append(dd)
 	fill_missing(grid, dirs)
@@ -148,7 +155,7 @@ def print_grid(grid, T = False, name = 'grid'):
 	fd = open(out_file, mode='w')
 	writer = csv.writer(fd, delimiter='\t')
 
-	writer.writerow([''] + grid.keys())
+	writer.writerow([''] + list(grid.keys()))
 	
 	for bench1 in grid.keys():
 		print_line = [bench1]

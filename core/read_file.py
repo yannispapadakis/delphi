@@ -51,6 +51,7 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 					continue
 
 				vm_seq_num = json_data['vm_seq_num']
+				gold_vms.append(vm_seq_num)
 				if vm_seq_num in excluded:
 					line=fp.readline()
 					continue
@@ -62,12 +63,13 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 					vm_times_completed[vm_seq_num] = 0
 					vms_boot_time[vm_seq_num] = event_epoch
 					vm_times_str[vm_seq_num] = [event_str]
+					vm_output[vm_seq_num] = []
+					vms_vcpus[vm_seq_num] = int(filename.split('/')[-1].split('.')[0].split('-')[vm_seq_num][-1])
 				elif event_type == "shutdown":
 					limit_heartbeats = 1
 				elif event_type == "spawn":
 					vcpus = json_data['vcpus']
 					vms_vcpus[vm_seq_num] = vcpus
-					vm_output[vm_seq_num] = []
 					host = json_data['host']
 					vms_hosts[vm_seq_num] = host
 				elif event_type == "heartbeat":
@@ -78,6 +80,9 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 					vm_times_completed[vm_seq_num] += 1
 					vm_event_times[vm_seq_num].append(event_epoch)
 					bench = json_data['bench']
+					vm_name = bench.replace('.','-') if 'parsec' in bench else bench
+					vm_name = 'acticloud1-gold-' + vm_name
+					vms_names[vm_seq_num] = vm_name
 					load = 0 if bench != "stress-cpu" else json_data['load']
 					output = json_data['output']
 					vcpus = json_data['vcpus']
@@ -316,5 +321,3 @@ def parse_files(ld = pairs_dir, endswith = '.txt'):
 		for f in failures:
 			print("From file: " + f[0] + "\n\tVMs removed: " + str(f[1]))
 	return total_measures
-
-total_measures = parse_files(pairs_dir + '/astar/1vs1/')
