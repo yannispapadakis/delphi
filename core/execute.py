@@ -58,7 +58,6 @@ def spawn_vm(seq_num, vm_chars, wait_until_finished, node, port):
 
 	start_time = time.time()
 	new_vm = ost_client.nova.servers.create(vm_name, image, flavor, userdata=udata,
-#	                                        key_name="rootkey", meta=metadata) 
 	                                        key_name="rootkey", meta=metadata,
 	                                        availability_zone="nova:" + node)
 
@@ -80,9 +79,9 @@ def spawn_vm(seq_num, vm_chars, wait_until_finished, node, port):
 	                        'host': getattr(new_vm, 'OS-EXT-SRV-ATTR:host'),
 							'name': vm_name,
 	                        'vcpus': vcpus}, port)
-#	logger.info('EVENT: {"vm_seq_num": %d, "event": "spawn" , "time": "%s", "host": "%s", "vcpus": %d}',
-#	            seq_num, time_now,
-#	            getattr(new_vm, 'OS-EXT-SRV-ATTR:host'), vcpus)
+	logger.info('EVENT: {"vm_seq_num": %d, "event": "spawn" , "time": "%s", "host": "%s", "vcpus": %d}',
+	            seq_num, time_now,
+	            getattr(new_vm, 'OS-EXT-SRV-ATTR:host'), vcpus)
 	time_now = datetime.datetime.utcnow().strftime("%Y-%m-%d.%X")
 	logger.info("Spawned new VM with seq_num: %d and name: %s at: %s (in %4.2f seconds) on host %s",
 	         seq_num, vm_name, time_now, end_time - start_time,

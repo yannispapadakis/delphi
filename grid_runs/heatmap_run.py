@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import sys
 sys.path.append("../core/")
 from vm_messages_monitor import *
@@ -79,9 +80,12 @@ def get_vm_commands(seq_num, vm_chars, port, fill_in = False):
 	runtime = vm_chars['runtime']
 
 	runtime_isolation = bench[1]['runtime_isolation'][vcpus]
-	times_to_run = (runtime * 60.0) / runtime_isolation
+	times_to_run = int(math.ceil((runtime * 60.0) / runtime_isolation))
 
 	bench_name = bench[0]
+	vm_name = bench_name.replace('.','-') if "parsec" in bench_name else bench_name
+	vm_name = '-'.join(["acticloud1", "gold", vm_name, str(times_to_run) + "_times", "to_completion"])
+	logger.info("Spawned new VM with seq_num: %d and name: %s", seq_num, vm_name)
 	udata = ""
 	
 	if not fill_in:

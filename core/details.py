@@ -1,3 +1,4 @@
+#!/usr/bin/python
 from base_config import *
 from benchmarks import *
 from read_file import *
@@ -112,6 +113,11 @@ def print_details(total_measures):
 						return
 
 def details():
+	print("______________________________________________________")
+	print("|                                                     |")
+	print("| Check if the file is up-to-date with recent changes |")
+	print("|_____________________________________________________|\n")
+	return
 	while True:
 		ldir = load_dir + 'pairs/'
 		print "Choose benchmark:"

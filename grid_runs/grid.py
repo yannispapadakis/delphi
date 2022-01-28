@@ -2,7 +2,6 @@
 import sys
 sys.path.append('../core/')
 sys.path.append('../perf_runs/')
-from base_config import *
 from read_file import *
 from perf_reader import *
 
@@ -74,14 +73,9 @@ def fill_missing(grid, dirs):
 		total_measures = parse_files(directory)
 		for f in total_measures:
 			measures = total_measures[f]
-			try:
-				(name_0, name_1) = (measures['vms_names'][0], measures['vms_names'][1])
-			except KeyError:
-				print(measures['vms_names'])
-				print(f)
-				continue
-			name_0 = name_0.split('-')[3].split('.')[1]
-			name_1 = name_1.split('-')[3].split('.')[1]
+			(name_0, name_1) = (measures['vms_names'][0], measures['vms_names'][1])
+			name_0 = name_0.split('-')[3] if 'parsec' in name_0 else name_0.split('-')[3].split('.')[1]
+			name_1 = name_1.split('-')[3] if 'parsec' in name_1 else name_1.split('-')[3].split('.')[1]
 			(vcpus_0, vcpus_1) = (str(measures['vms_vcpus'][0]), str(measures['vms_vcpus'][1]))
 			bench1 = name_0 + '-' + vcpus_0
 			bench2 = name_1 + '-' + vcpus_1
@@ -167,6 +161,14 @@ def print_grid(grid, T = False, name = 'grid'):
 		writer.writerow(print_line)
 	fd.close()
 
+def clean_grid(grid):
+	removed = []
+	for bench in grid:
+		if not grid[bench]:
+			removed.append(bench)
+	for bench in removed:
+		del grid[bench]
+
 def make_grid(feature = 'sens', qos = [1.2], class_num = 2):
 	grid = generate_grid()
 	ok = read_grid(grid)
@@ -175,6 +177,7 @@ def make_grid(feature = 'sens', qos = [1.2], class_num = 2):
 	if feature == 'cont':
 		grid = transpose_grid(grid)
 	if not ok:
+		clean_grid(grid)
 		print_grid(grid, feature == 'cont')
 	return classes(grid, qos, class_num)
 

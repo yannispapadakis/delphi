@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import os, sys, csv
 import pandas as pd
 import numpy as np
