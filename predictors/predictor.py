@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import pandas as pd
 import random, pprint, sys
 sys.path.append('../grid_runs/')
@@ -114,7 +115,7 @@ def predict(clos = [1.2] , feature = 'sens', mod = 'SVC', class_num = 2):
 	return np.mean(acc_scores)
 
 def help_message(ex):
-	msg =  "Usage:   python %s <feature> <qos> <classes> <model>\n" % ex
+	msg =  "Usage:   %s <feature> <qos> <classes> <model>\n" % ex
 	msg += "Feature: " + ' | '.join(['sens', 'cont']) + '\n'
 	msg += "QoS:     comma separated float list\n"
 	msg += "Classes: " + ' | '.join(['2', '3']) + '\n'
@@ -127,6 +128,9 @@ def arg_check(argv):
 	qos = sorted(map(float, argv[1].split(',')))
 	class_num = int(argv[2])
 	mod = argv[3]
+	if feature not in ['sens', 'cont'] or \
+	   class_num not in [2, 3] or \
+	   mod not in ["SVC", "DT", "KN", "RF"]: return
 	predict(qos, feature, mod, class_num)
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import os, csv, sys
 import numpy as np
 from scipy.stats.mstats import gmean
@@ -208,7 +209,7 @@ def perf_files(tool = 'pqos'):
 	if len(tool.split('-')) == 2:
 		(tool, version) = tool.split('-')
 	directory = perf_directory + tool + ('-' + version if version != '' else '') + '/'
-	files = os.listdir(directory)
+	files = filter(lambda x: x.endswith('csv'), os.listdir(directory))
 	all_measures = dict()
 	if tool == 'pqos':
 		all_measures['Title'] = ['Benchmark', 'IPC', 'LLC_Misses', 'LLC', 'MBL', 'MBR', 'Vcpus', 'Class']

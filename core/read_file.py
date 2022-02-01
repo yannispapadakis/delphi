@@ -150,10 +150,11 @@ def mean_perf_calc(vm_perfs, vm_names, vm_event_times, \
 		duration = time_axis[-1] - time_axis[0]
 		duration_mins = duration / 60.0
 		if 'to_completion' in tokens:
-			spec_name = tokens[2]
-			if "spec" in tokens: spec_name = tokens[3]
+			spec_name = tokens[3]
+			if 'parsec.' in name: spec_name = tokens[2]
 			try:
-				base_time = benches_vcpus[spec_name]['runtime_isolation'][vcpus]
+				search = spec_name if 'parsec.' in name else 'parsec.' + spec_name
+				base_time = benches_vcpus[search]['runtime_isolation'][vcpus]
 			except:
 				base_time = benches_vcpus['spec-' + spec_name]['runtime_isolation'][vcpus]
 			duration = sum([base_time * x for x in vm_perfs[vm]])

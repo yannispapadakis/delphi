@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import sys
 sys.path.append('../core/')
 from execute import *
