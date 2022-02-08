@@ -27,8 +27,8 @@ def clean(filename):
 	os.rename('output.txt', filename)
 
 def parse_all_files():
-	pairs_dir = '/home/ypap/characterization/results/coexecutions/'
-	parsecs = subprocess.check_output('ls -rt ' + pairs_dir, shell = True).split("\n")[28:32]
+	pairs_dir = '/home/ypap/delphi/results/coexecutions/'
+	parsecs = subprocess.check_output('ls -rt ' + pairs_dir, shell = True).split("\n")[32:33]
 	for parsec in parsecs:
 		for comb in os.listdir(pairs_dir + parsec):
 			ld = pairs_dir + parsec + '/' + comb

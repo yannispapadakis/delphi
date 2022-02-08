@@ -10,8 +10,7 @@ from read_file import *
 
 ########################################### PCM Parser ###########################################
 
-perf_directory = '/home/ypap/characterization/results/isolation_runs/'
-csv_dir = '/home/ypap/characterization/results/'
+csv_dir = home_dir + 'results/perf_csv/'
 
 def pcm_measures(filename, directory):
 	fd = open(directory + filename)
@@ -85,7 +84,7 @@ def read_pcm_file(filename, directory):
 ########################################## PQOS Parser ############################################
 
 def read_pqos_files(pqos_file, run_periods):
-	pqos_f = open(perf_directory + 'pqos/' + pqos_file, 'r')
+	pqos_f = open(perf_dir + 'pqos/' + pqos_file, 'r')
 	rd = csv.reader(pqos_f)
 	pqos_measures = dict()
 	for row in rd:
@@ -150,7 +149,7 @@ def apply_mean(all_measures):
 			#measures[event] = gmean(list(filter(lambda x: x > 0, measures[event])))
 
 def perf_to_csv(measures, name):
-	out_file = open(csv_dir + 'perf_csv/' + name + '_perf.csv', 'w')
+	out_file = open(csv_dir + name + '_perf.csv', 'w')
 	writer = csv.writer(out_file)
 	events = measures.keys()
 	writer.writerow(events)
@@ -180,10 +179,10 @@ def mpki_calculation(all_measures):
 
 def attach_pqos(all_measures):
 	run_periods = time_cleanup('pqos')
-	pqos_files = os.listdir(perf_directory + 'pqos/')
+	pqos_files = os.listdir(perf_dir + 'pqos/')
 	for pqos_file in list(filter(lambda x: x.endswith('csv'), pqos_files)):
 		bs = ae = alll = 0
-		pqos_f = open(perf_directory + 'pqos/' + pqos_file, 'r')
+		pqos_f = open(perf_dir + 'pqos/' + pqos_file, 'r')
 		rd = csv.reader(pqos_f)
 		pqos_measures = dict()
 		for row in rd:
@@ -208,7 +207,7 @@ def perf_files(tool = 'pqos'):
 	version = ''
 	if len(tool.split('-')) == 2:
 		(tool, version) = tool.split('-')
-	directory = perf_directory + tool + ('-' + version if version != '' else '') + '/'
+	directory = perf_dir + tool + ('-' + version if version != '' else '') + '/'
 	files = filter(lambda x: x.endswith('csv'), os.listdir(directory))
 	all_measures = dict()
 	if tool == 'pqos':
@@ -252,7 +251,7 @@ def perf_files(tool = 'pqos'):
 	return all_measures
 
 def time_cleanup(tool = 'perf'):
-	directory = perf_directory + tool + '/outputs/'
+	directory = perf_dir + tool + '/outputs/'
 	total_measures = parse_files(directory)
 	run_periods = dict()
 	for f in total_measures:

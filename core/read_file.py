@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 home_dir = '/'.join(os.getcwd().split('/')[:4]) + '/'
 pairs_dir = home_dir + 'results/coexecutions/'
-perf_dir = home_dir + 'results/perf_runs/'
+perf_dir = home_dir + 'results/isolation_runs/'
 from benchmarks import *
 
 def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold_vms, \

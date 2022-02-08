@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 from pairing import *
 
+matrix_dir = home_dir + 'results/'
+
 def get_predictions_mult(benchmarks):
 	predictions = dict()
 	classes = 2
@@ -33,6 +35,22 @@ def exhaustive_matrix(preds):
 				   (preds[col]['sens'] and preds[row]['cont'][preds[col]['slo']])
 			preds[row]['heatmap'][col] = ((preds[row]['sens'], preds[col]['cont'][preds[row]['slo']]), deny)
 
+def print_matrix(preds, workload):
+	out_file = matrix_dir + workload + '_matrix.csv'
+	fd = open(out_file, mode='w')
+	writer = csv.writer(fd, delimiter='\t')
+	benchmarks = list(preds.keys())
+	writer.writerow([''] + benchmarks)
+	for bench1 in benchmarks:
+		print_line = [bench1]
+		for bench2 in benchmarks:
+			try:
+				print_line.append(preds[bench1]['heatmap'][bench2][0])
+			except:
+				print_line.append('0')
+		writer.writerow(print_line)
+	fd.close()
+
 def sort_benchmarks(preds):
 	queue = sorted(list(preds.items()), key = lambda x: x[1]['slo'], reverse = True)
 	queue = sorted(queue, key = lambda x: sum(x[1]['cont'].values()), reverse = True)
@@ -40,9 +58,10 @@ def sort_benchmarks(preds):
 	queue = sorted(queue, key = lambda x: sum(map(lambda y: y[1], x[1]['heatmap'].values())), reverse = True)
 	return queue
 
-def multSLOs(benchmarks):
+def multSLOs(benchmarks, workload):
 	preds = get_predictions_mult(benchmarks)
 	exhaustive_matrix(preds)
+	print_matrix(preds, workload)
 	queue = sort_benchmarks(preds)
 	pairs = []
 	for bench in queue:
@@ -51,6 +70,7 @@ def multSLOs(benchmarks):
 		valid_candidates = list(filter(lambda y: y[1][1] == 0 and y[0] not in flatpairs, bench[1]['heatmap'].items()))
 		if len(valid_candidates) == 0:
 			print("There are no valid candidates for:", bench[0])
+			print("Pairs until now:",pairs)
 			return
 		# bench's sensitivity
 		combinations = sorted(list(set(map(lambda y: y[1][0], valid_candidates))), key = lambda y: sum(y), reverse = True)
@@ -67,28 +87,25 @@ def multSLOs(benchmarks):
 		pair = pred_candidates[0]
 		pairs.append((bench[0], pair[0]))
 	pprint.pprint(pairs)
+	return preds
 
 def helper_print(queue, preds):
 	candidates_per_bench = dict((bench, sum(map(lambda x: x[1], preds[bench]['heatmap'].values()))) for bench in preds)
 	for x in queue:
 		print(x[0], '\t', candidates_per_bench[x[0]], '\t', x[1]['sens'], '\t', x[1]['cont'], '\t', x[1]['slo'])
 
-def main(args):
-	bench_file = wd_dir + args[0]
+def workload_reader(bench_file):
 	fd = open(bench_file)
 	reader = csv.reader(fd, delimiter=',')
 	benchmarks = [str(i) + ':' + row[0] + '-' + row[1] + '_' + row[2] for (i, row) in enumerate(reader)]
-	multSLOs(benchmarks)
 	fd.close()
+	return benchmarks
 
 def help_message(ex):
 	m =  "Usage:    %s <workload>\n" % ex
 	m += "Workload: " + ' | '.join(list(map(lambda x: x.split('.')[0], filter(lambda x: x.endswith('multSLO.csv'), os.listdir('workload_pairs/'))))) + '\n'
 	print(m)
-	return 0
 
 if __name__ == '__main__':
-	if len(sys.argv) < 2:
-		sys.exit(help_message(sys.argv[0]))
-	else:
-		main(sys.argv[1:])
+	if len(sys.argv) < 2: help_message(sys.argv[0])
+	else: preds = multSLOs(workload_reader(wd_dir + sys.argv[1]), sys.argv[1].split('.')[0])

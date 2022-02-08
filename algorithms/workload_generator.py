@@ -1,7 +1,8 @@
 #!/usr/bin/python
 import sys, csv, pprint, random, os
 
-predictions_dir = '/home/ypap/characterization/results/predictions/SVC/'
+predictions_dir = '/home/ypap/delphi/results/predictions/SVC/'
+workload_dir = '/home/ypap/delphi/algorithms/workload_pairs/'
 
 def pred_file(mode, qos, classes):
 	return predictions_dir + mode + '_' + str(classes) + '_' + str(qos) + '_SVC.csv'
@@ -35,7 +36,6 @@ def single_slo(qos, classes, contention, size):
 		for c in groups:
 			bench_list.append(random.choice(groups[c]).replace('-',','))
 		bench_list.append(random.choice(groups[cont]).replace('-',','))
-	workload_dir = '/home/ypap/characterization/algorithms/workload_pairs/'
 	wl_file = open(workload_dir + contention + '-' + str(size) + '.csv', 'w')
 	for row in bench_list:
 		wl_file.write(row + '\n')
@@ -55,11 +55,10 @@ def multiple_slos(classes, contention, size):
 	if contention == 'high': cont = 2
 	while len(bench_list) < size:
 		for c in [0, 1, 2]:
-			slo = random.choice(slos)
-			bench_list.append(random.choice(groups[random.choice(slos)][c]).replace('-', ',') + ',' + str(slo))
-		slo = random.choice(slos)
-		bench_list.append(random.choice(groups[random.choice(slos)][cont]).replace('-', ',') + ',' + str(slo))
-	workload_dir = '/home/ypap/characterization/algorithms/workload_pairs/'
+			slo = random.choice(filter(lambda x: c in groups[x].keys(), slos))
+			bench_list.append(random.choice(groups[slo][c]).replace('-', ',') + ',' + str(slo))
+		slo = random.choice(filter(lambda x: c in groups[x].keys(), slos))
+		bench_list.append(random.choice(groups[slo][c]).replace('-', ',') + ',' + str(slo))
 	wl_file = open(workload_dir + contention + '-' + str(size) + '-multSLO.csv', 'w')
 	for row in bench_list:
 		wl_file.write(row + '\n')

@@ -7,7 +7,7 @@ import seaborn as sns
 from grid import *
 from matplotlib.patches import Rectangle, FancyBboxPatch
 
-res_dir = '/home/ypap/characterization/results/'
+res_dir = '/home/ypap/delphi/results/'
 
 def box_plot_example():
 	g_fd = open(res_dir + 'grids/grid.csv')

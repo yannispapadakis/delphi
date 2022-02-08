@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 import pandas as pd
-import random, pprint, sys
+import random, pprint, sys, math
 sys.path.append('../grid_runs/')
 sys.path.append('../perf_runs/')
 from sklearn import preprocessing
@@ -88,7 +88,7 @@ def predict(clos = [1.2] , feature = 'sens', mod = 'SVC', class_num = 2):
 	fold = 8
 	tool = 'perf'
 	measures = perf_files(tool)
-	chunksize = len(measures.keys()) / fold
+	chunksize = int(math.floor(len(measures.keys()) / fold))
 	benches = [x for x in measures.keys() if x != 'Title']
 	random.shuffle(benches)
 	chunks = [benches[i:i + chunksize] for i in range(0, len(benches), chunksize)]
