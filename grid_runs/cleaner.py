@@ -26,10 +26,17 @@ def clean(filename):
 	fw.close()
 	os.rename('output.txt', filename)
 
-def parse_all_files():
+def parse_all_files(folders):
 	pairs_dir = '/home/ypap/delphi/results/coexecutions/'
-	parsecs = subprocess.check_output('ls -rt ' + pairs_dir, shell = True).split("\n")[32:33]
-	for parsec in parsecs:
+	parsecs = subprocess.check_output('ls -rt ' + pairs_dir, shell = True).split("\n")[28:-1]
+	if len(folders):
+		if 'all' in folders: to_clean = parsecs
+		else:
+			for bench in folders:
+				if bench not in parsecs:
+					folders.pop(folders.index(bench))
+			to_clean = folders
+	for parsec in to_clean:
 		for comb in os.listdir(pairs_dir + parsec):
 			ld = pairs_dir + parsec + '/' + comb
 			for filename in os.listdir(ld):
@@ -37,4 +44,4 @@ def parse_all_files():
 		print parsec, "cleaned"
 			
 if __name__ == "__main__":
-	parse_all_files()
+	parse_all_files(sys.argv[1:])

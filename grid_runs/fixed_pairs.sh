@@ -28,9 +28,10 @@ IFS=',' read -r -a parsecs <<< "$parsec_benchmarks"
 for parsec in ${parsecs[@]}; do
 	IFS=',' read -r -a specs <<< "$spec_benchmarks"
 	for spec in ${specs[@]}; do
-		echo $(date +"%T") "Running:" $parsec "(" $parsec_vcpus ")" "vs" $spec "(" $spec_vcpus ")"
+		echo $(date +"%F %T") ":" $parsec "(" $parsec_vcpus ")" "vs" $spec "(" $spec_vcpus ")"
 		output_file="${parsec}_${parsec_vcpus}-${spec}_${spec_vcpus}.txt"
-		python heatmap_run.py $parsec $parsec_vcpus $spec $spec_vcpus &> ../results/coexecutions/${parsec}/${parsec_vcpus}vs${spec_vcpus}/${output_file}
+		#python heatmap_run.py $parsec $parsec_vcpus $spec $spec_vcpus &> ../results/coexecutions/${parsec}/${parsec_vcpus}vs${spec_vcpus}/${output_file}
+		python heatmap_run.py $parsec $parsec_vcpus $spec $spec_vcpus &> ../results/${output_file}
 	done
 done
 

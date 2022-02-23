@@ -58,19 +58,36 @@ def sort_benchmarks(preds):
 	queue = sorted(queue, key = lambda x: sum(map(lambda y: y[1], x[1]['heatmap'].values())), reverse = True)
 	return queue
 
+def wont_find_candidate(queue):
+	total_cand_list = []
+	for (i, bench) in enumerate(queue):
+		candidate_list = list(map(lambda x:x[0], filter(lambda y: y[1][1] == 0, bench[1]['heatmap'].items())))
+		total_cand_list = list(set(total_cand_list + candidate_list))
+		if len(total_cand_list) < i + 1:
+			return i
+	return -1
+
+def bad_pairing(queue):
+	pairs = []
+	error_index = wont_find_candidate(queue)
+	while error_index > -1:
+		error_bench = queue.pop(error_index)
+		bench_to_pair = queue.pop(0)
+		pairs.append((error_bench[0], bench_to_pair[0]))
+		error_index = wont_find_candidate(queue)
+	return (pairs, queue)
+
 def multSLOs(benchmarks, workload):
 	preds = get_predictions_mult(benchmarks)
 	exhaustive_matrix(preds)
-	print_matrix(preds, workload)
 	queue = sort_benchmarks(preds)
-	pairs = []
+	(pairs, queue) = bad_pairing(queue)
 	for bench in queue:
 		flatpairs = [x for pair in pairs for x in pair]
 		if bench[0] in flatpairs: continue
 		valid_candidates = list(filter(lambda y: y[1][1] == 0 and y[0] not in flatpairs, bench[1]['heatmap'].items()))
 		if len(valid_candidates) == 0:
 			print("There are no valid candidates for:", bench[0])
-			print("Pairs until now:",pairs)
 			return
 		# bench's sensitivity
 		combinations = sorted(list(set(map(lambda y: y[1][0], valid_candidates))), key = lambda y: sum(y), reverse = True)

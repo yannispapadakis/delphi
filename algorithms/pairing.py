@@ -228,8 +228,8 @@ def decide_pairs(benchmarks, algo, real = True, classes = 2):
 	return fix_pairing(pairs)
 			
 def help_message(ex):
-	msg =  "Usage for loop:    python3 %s loop <clos>\n" % ex
-	msg += "Usage for manual:  python3 %s <clos> <workload> <algorithm> <real> <classes>\n" % ex 
+	msg =  "Usage for loop:    %s loop <clos>\n" % ex
+	msg += "Usage for manual:  %s <clos> <workload> <algorithm> <real> <classes>\n" % ex
 	msg += "CLoS:              " + ' | '.join(sorted(set(map(lambda x: x.split('_')[2], os.listdir(pred_dir + 'SVC/'))))) + '\n'
 	msg += "Workload:          " + ' | '.join(list(map(lambda x: x.split('.')[0], filter(lambda x: x.endswith('csv'), os.listdir('workload_pairs/'))))) +'\n'
 	msg += "Algorithms:        " + ' | '.join(['oracle', 'forest', 'attackers', 'whisker', 'random', 'custom']) +'\n'
