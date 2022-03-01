@@ -4,7 +4,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from grid import *
+sys.path.append('../predict/')
+from heatmap_reader import *
 from matplotlib.patches import Rectangle, FancyBboxPatch
 
 res_dir = '/home/ypap/delphi/results/'

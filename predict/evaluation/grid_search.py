@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../')
 from predictor import *
 
 def model_run(model, feat, classes):

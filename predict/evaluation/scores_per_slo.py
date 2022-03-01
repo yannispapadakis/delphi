@@ -1,6 +1,7 @@
+import subprocess, ast, sys
+sys.path.append('../')
 from predictor import *
 from scipy.stats.mstats import gmean
-import subprocess, ast
 
 def f1_calc(file_):
 	cmd = 'tail -n1 ' + file_

@@ -1,11 +1,8 @@
 from sklearn.ensemble import RandomForestRegressor 
 import pandas as pd
-import sys
-sys.path.append('../perf_runs/')
-from perf_reader import *
-sys.path.append('../grid_runs/')
-from grid import *
-import random
+import sys, random
+from isolation_reader import *
+from heatmap_reader import *
 
 def pair_perf(measures):
 	pair_measures = []

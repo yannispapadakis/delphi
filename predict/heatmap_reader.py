@@ -1,12 +1,11 @@
 #!/usr/bin/python3
 import sys
 sys.path.append('../core/')
-sys.path.append('../perf_runs/')
-from read_file import *
-from perf_reader import *
+from read_vm_output import *
+from isolation_reader import *
 
 csv_dir = home_dir + 'results/'
-grid_dir = csv_dir + 'grids/'
+grid_dir = csv_dir + 'heatmaps/'
 
 vcpus = ['1', '2', '4', '8']
 

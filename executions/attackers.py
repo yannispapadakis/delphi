@@ -1,7 +1,6 @@
 import sys
 sys.path.append('../core/')
 from execute import *
-sys.path.append('../grid_runs/')
 from one_pair import generate_vms_list
 import libvirt_client
 sys.path.append('/home/ypap/actimanager/common/')

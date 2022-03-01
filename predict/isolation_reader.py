@@ -6,11 +6,9 @@ from collections import OrderedDict
 from operator import add
 import pprint
 sys.path.append('../core/')
-from read_file import *
+from read_vm_output import *
 
 ########################################### PCM Parser ###########################################
-
-csv_dir = home_dir + 'results/perf_csv/'
 
 def pcm_measures(filename, directory):
 	fd = open(directory + filename)
@@ -149,7 +147,7 @@ def apply_mean(all_measures):
 			#measures[event] = gmean(list(filter(lambda x: x > 0, measures[event])))
 
 def perf_to_csv(measures, name):
-	out_file = open(csv_dir + name + '_perf.csv', 'w')
+	out_file = open(perf_dir + 'perf/csv_files/' + csv_dir + name + '_perf.csv', 'w')
 	writer = csv.writer(out_file)
 	events = measures.keys()
 	writer.writerow(events)

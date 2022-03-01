@@ -2,10 +2,9 @@
 import random, sys, csv, subprocess
 import numpy as np
 from operator import itemgetter
-sys.path.append('../perf_runs/')
-from read_attackers import attacker_classifier
-sys.path.append('../grid_runs/')
-from grid import *
+from attackers_read import attacker_classifier
+sys.path.append('../predict/')
+from heatmap_reader import *
 
 from matching.algorithms import stable_roommates
 from matching import Player
@@ -16,8 +15,8 @@ report = ''
 grid = generate_grid()
 read_grid(grid)
 
-pred_dir = csv_dir + 'predictions/'
-wd_dir = home_dir + 'algorithms/workload_pairs/' 
+pred_dir = home_dir + 'results/predictions/'
+wd_dir = home_dir + 'pairings/workload_pairs/' 
 
 """--------------------------- Random Pairing -----------------------------"""
 def random_pairs(benchmarks):

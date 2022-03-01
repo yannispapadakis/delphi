@@ -8,7 +8,7 @@ run_perf()
 	tool=$4
 	echo $(date +"%T") "Running" $vm "(" $vcpus "vcpus) with" $tool
 	output_file=${vm}_${vcpus}-${tool}.txt
-	python perf.py ${vm} ${vcpus} acticloud${node} ${tool} &> ../results/${output_file}
+	python isolation.py ${vm} ${vcpus} acticloud${node} ${tool} &> ../results/${output_file}
 }
 
 run_attacker()

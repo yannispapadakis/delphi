@@ -1,13 +1,12 @@
 import sys
 sys.path.append('../core/')
-from read_file import *
-sys.path.append('../grid_runs/')
-from grid import *
+from read_vm_output import *
+sys.path.append('../predict/')
+from heatmap_reader import *
 from scipy.stats.mstats import gmean
 
 def sensitivity(qos = 1.2, function = 'geomean'):
-	result_dir = home_dir + "results/perf_runs/attackers/"
-	total_measures = parse_files(result_dir)
+	total_measures = parse_files(perf_dir + 'attackers/')
 	l3 = dict()
 	memBw = dict()
 

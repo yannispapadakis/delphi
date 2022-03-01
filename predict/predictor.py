@@ -1,11 +1,9 @@
 #!/usr/bin/python3
 import pandas as pd
-import random, pprint, sys, math
-sys.path.append('../grid_runs/')
-sys.path.append('../perf_runs/')
+import random, pprint, sys, math, subprocess
 from sklearn import preprocessing
-from grid import *
-from perf_reader import *
+from heatmap_reader import *
+from isolation_reader import *
 from datetime import datetime
 from model_selection import select_model
 
@@ -84,15 +82,18 @@ def run_model(answers, feature, cl, qos, mod = 'SVC'):
 		answers[test_names[i]] = (test_pred[i], y_test[i])
 	return acc_score
 
-def predict(clos = [1.2] , feature = 'sens', mod = 'SVC', class_num = 2):
+def cross_validation(benchmarks, clos = [1.2] , feature = 'sens', mod = 'SVC', class_num = 2):
 	fold = 8
 	tool = 'perf'
 	measures = perf_files(tool)
+	exclude = set(measures.keys()).difference(benchmarks)
+	for x in exclude:
+		if x != 'Title': del measures[x]
 	chunksize = int(math.floor(len(measures.keys()) / fold))
 	benches = [x for x in measures.keys() if x != 'Title']
 	random.shuffle(benches)
 	chunks = [benches[i:i + chunksize] for i in range(0, len(benches), chunksize)]
-	(classes, whiskers, quartiles) = make_grid(feature, clos, class_num)
+	(classes, whiskers, quartiles) = make_partial_grid(benchmarks, feature, clos, class_num)
 
 	answers = dict()
 	acc_scores = []
@@ -114,6 +115,10 @@ def predict(clos = [1.2] , feature = 'sens', mod = 'SVC', class_num = 2):
 		print(feature + ' | ' + ','.join([str(x) for x in clos]) + ' | C:' + str(class_num) + ' | ' + mod + ' | ' + str(100 * round(np.mean(acc_scores), 4)) + '%')
 	return np.mean(acc_scores)
 
+def testing(train_set, test_set, clos = [1.2], feature = 'sens', mod = 'SVC', class_num = 2):
+	measures = perf_files(tool)
+
+
 def help_message(ex):
 	msg =  "Usage:   %s <feature> <qos> <classes> <model>\n" % ex
 	msg += "Feature: " + ' | '.join(['sens', 'cont']) + '\n'
@@ -123,6 +128,14 @@ def help_message(ex):
 	print(msg)
 	return 0
 
+def prediction(qos, feature, mod, class_num):
+	pairs_dir = home_dir + 'results/coexecutions/'
+	all_benchmarks = subprocess.run(('ls -rt ' + pairs_dir).split(), stdout = subprocess.PIPE).stdout.decode("utf-8").split('\n')
+	specs = [x + '-' + y for x in all_benchmarks[:28] for y in vcpus]
+	parsecs = all_benchmarks[28:-1]
+	cross_validation(specs, qos, feature, mod, class_num)	
+	testing()
+
 def arg_check(argv):
 	feature = argv[0]
 	qos = sorted(map(float, argv[1].split(',')))
@@ -131,7 +144,7 @@ def arg_check(argv):
 	if feature not in ['sens', 'cont'] or \
 	   class_num not in [2, 3] or \
 	   mod not in ["SVC", "DT", "KN", "RF"]: return
-	predict(qos, feature, mod, class_num)
+	prediction(qos, feature, mod, class_num)
 
 if __name__ == '__main__':
 	if len(sys.argv) < 5:
