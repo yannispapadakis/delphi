@@ -49,10 +49,8 @@ def run_model(answers, feature, cl, qos, mod = 'SVC'):
 	train_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod) + 'train.csv')
 	test_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod) + 'test.csv')
 
-	if feature == 'cont':
-		remove_cols = [0, 2, 3, 4, 5, 6, 8, 15]
-	if feature == 'sens':
-		remove_cols = [0, 8, 13, 15]
+	if feature == 'cont': remove_cols = [0, 2, 3, 4, 5, 6, 8, 15]
+	if feature == 'sens': remove_cols = [0, 8, 13, 15]
 	train = train_data.drop(train_data.columns[remove_cols], axis = 1)
 	test = test_data.drop(test_data.columns[remove_cols], axis = 1)
 
@@ -134,7 +132,6 @@ def prediction(qos, feature, mod, class_num):
 	specs = [x + '-' + y for x in all_benchmarks[:28] for y in vcpus]
 	parsecs = all_benchmarks[28:-1]
 	cross_validation(specs, qos, feature, mod, class_num)	
-	testing()
 
 def arg_check(argv):
 	feature = argv[0]
