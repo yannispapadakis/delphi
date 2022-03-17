@@ -201,6 +201,24 @@ def attach_pqos(all_measures):
 
 ############################################# Main ################################################
 
+def write_perf_measures(all_measures):
+	out_file = open(perf_dir + 'perf/accumulated/perf_measures.csv', 'w')
+	writer = csv.writer(out_file)
+	for bench in all_measures:
+		writer.writerow(all_measures[bench])
+	out_file.close()
+
+def read_perf_measures():
+	in_file = open(perf_dir + 'perf/accumulated/perf_measures.csv', 'r')
+	reader = csv.reader(in_file)
+	measures = dict()
+	for row in reader:
+		if row[0] == "Benchmark":
+			measures['Title'] = row
+		else:
+			measures[row[0]] = row
+	return measures
+
 def perf_files(tool = 'pqos'):
 	version = ''
 	if len(tool.split('-')) == 2:
@@ -224,6 +242,7 @@ def perf_files(tool = 'pqos'):
 				all_measures['Title'] = m.keys() + ['Class']
 			all_measures[m['Benchmark']] = m.values()
 	elif tool == 'perf':
+		return read_perf_measures()
 		final_title = []
 		run_periods = time_cleanup('perf')
 		for f in list(filter(lambda x: x.endswith('csv'), files)):
@@ -239,6 +258,7 @@ def perf_files(tool = 'pqos'):
 				final_title = list(all_measures[bench].keys())
 				all_measures[bench] = [bench] + list(all_measures[bench].values())
 			all_measures['Title'] = ['Benchmark'] + final_title + ['Class']
+			#write_perf_measures(all_measures)
 		elif version == 'sp':
 			apply_mean(all_measures)
 			for bench in all_measures:
@@ -257,4 +277,4 @@ def time_cleanup(tool = 'perf'):
 	return run_periods
 
 if __name__ == '__main__':
-	measures = perf_files(sys.argv[1])
+	print(perf_files(sys.argv[1]))
