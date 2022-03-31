@@ -1,7 +1,20 @@
-from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression, SGDClassifier, PassiveAggressiveClassifier, Perceptron, RidgeClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+from sklearn.svm import SVC, NuSVC, LinearSVC
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier, RadiusNeighborsClassifier, NearestCentroid
+from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.naive_bayes import GaussianNB, MultinomialNB, ComplementNB, BernoulliNB, CategoricalNB
+from sklearn.experimental import enable_hist_gradient_boosting
+from sklearn.ensemble import RandomForestClassifier, BaggingClassifier, ExtraTreesClassifier, AdaBoostClassifier, HistGradientBoostingClassifier, GradientBoostingClassifier, VotingClassifier
+from sklearn.neural_network import MLPClassifier
+
+qos_levels = [1 + 0.1 * x for x in range(1, 4)]
+models = ['LR', 'SGD', 'PA', 'PER', 'RID', \
+		  'LDA', 'QDA', 'SVC', 'NSVC', 'LSVC', \
+		  'DT', 'KN', 'RN', 'NC', 'GP', \
+		  'GNB', 'MNB', 'CoNB', 'BNB', 'CaNB', \
+		  'RF', 'BAG', 'ET', 'AB', 'HGB', 'GB', 'VOT', 'MLP']
 
 qos1_1 = {('sens', 2): {
 			'SVC': SVC(C = 5, kernel = 'poly', degree = 2),
@@ -93,7 +106,7 @@ def get_data_name(feature, cl, mod):
 	if modd == 'RandomForest': modd = 'RF'
 	return feature + str(cl) + modd
 
-def run_model(answers, feature, cl, qos, mod = 'SVC'):
+def run_model(answers, feature, cl, qos, mod):
 	train_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod) + 'train.csv')
 	test_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod) + 'test.csv')
 
@@ -131,9 +144,20 @@ def help_message(ex):
 	msg =  "Usage:    %s <function> <feature> <qos> <classes> <model>\n" % ex
 	msg += "Function: " + ' | '.join(['test', 'cv']) + '\n'
 	msg += "Feature:  " + ' | '.join(['sens', 'cont']) + '\n'
-	msg += "QoS:      " + ' | '.join(map(str, [1 + 0.1 * x for x in range(1, 4)])) + "\n"
-	msg += "Classes:  " + ' | '.join(['2', '3']) + '\n'
-	msg += "Model:    " + ' | '.join(['SVC', 'DT', 'KN', 'RF'])
+	msg += "QoS:      " + ' | '.join(map(str, qos_levels)) + "\n"
+	msg += "Classes:  " + ' | '.join(map(str, [2, 3])) + '\n'
+	msg += "Model:    " + ' | '.join(models)
 	print(msg)
 	return 0
 
+def arg_check(args):
+	if len(args) < 6: sys.exit(help_message(args[0]))
+	(func, feature, qos, class_num, model) = args[1:]
+	qos = float(qos)
+	class_num = int(class_num)
+	if func not in ['cv', 'test'] or \
+	   feature not in ['sens', 'cont'] or \
+	   qos not in qos_levels or \
+	   class_num not in [2, 3] or \
+	   model not in models:
+	   sys.exit(help_message(args[0]))

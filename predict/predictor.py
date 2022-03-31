@@ -2,7 +2,7 @@
 import random, sys, math, subprocess
 from heatmap_reader import *
 from isolation_reader import *
-from model_selection import csv_writer, print_pred, get_data_name, run_model, help_message
+from models_backend import *
 
 tool = 'perf'
 fold = 8
@@ -50,7 +50,8 @@ def testing(measures, train, test, feature, qos, class_num, model):
 	if type(model) == str:
 		print("TEST: " + feature + ' | ' + str(qos) + ' | C:' + str(class_num) + ' | ' + model + ' | ' + str(100 * round(acc_score, 4)) + '%')
 
-def prediction(func, feature, qos, class_num, model):
+def prediction(args):
+	(func, feature, qos, class_num, model) = args
 	all_benchmarks = subprocess.run(('ls -rt ' + pairs_dir).split(), stdout = subprocess.PIPE).stdout.decode("utf-8").split('\n')
 	specs = [x + '-' + y for x in all_benchmarks[:28] for y in vcpus]
 	parsecs = [x + '-' + '1' for x in all_benchmarks[28:-1]]
@@ -59,25 +60,13 @@ def prediction(func, feature, qos, class_num, model):
 		exclude = set(measures.keys()).difference(specs)
 		for x in exclude:
 			if x != 'Title': del measures[x]
-		cross_validation(measures, feature, qos, class_num, model)
+		return cross_validation(measures, feature, qos, class_num, model)
 	if func == 'test':
 		exclude = set(measures.keys()).difference(specs + parsecs)
 		for x in exclude:
 			if x != 'Title': del measures[x]
 		testing(measures, specs, parsecs, feature, qos, class_num, model)
 
-def arg_check(argv):
-	(func, feature, qos, class_num, model) = argv
-	qos = float(qos)
-	class_num = int(class_num)
-	if func not in ['cv', 'test'] or \
-	   feature not in ['sens', 'cont'] or \
-	   qos not in [1 + 0.1 * x for x in range(1, 4)] or \
-	   class_num not in [2, 3] or \
-	   model not in ["SVC", "DT", "KN", "RF"]: return False
-	prediction(func, feature, qos, class_num, model)
-
 if __name__ == '__main__':
-	if len(sys.argv) < 6:
-		sys.exit(help_message(sys.argv[0]))
-	sys.exit(arg_check(sys.argv[1:]))
+	arg_check(sys.argv)
+	prediction(args[1:])
