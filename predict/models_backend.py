@@ -4,7 +4,7 @@ from sklearn.svm import SVC, NuSVC, LinearSVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier, RadiusNeighborsClassifier, NearestCentroid
 from sklearn.gaussian_process import GaussianProcessClassifier
-from sklearn.naive_bayes import GaussianNB, MultinomialNB, ComplementNB, BernoulliNB, CategoricalNB
+from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from sklearn.experimental import enable_hist_gradient_boosting
 from sklearn.ensemble import RandomForestClassifier, BaggingClassifier, ExtraTreesClassifier, AdaBoostClassifier, HistGradientBoostingClassifier, GradientBoostingClassifier, VotingClassifier
 from sklearn.neural_network import MLPClassifier
@@ -13,7 +13,7 @@ qos_levels = [1 + 0.1 * x for x in range(1, 4)]
 models = ['LR', 'SGD', 'PA', 'PER', 'RID', \
 		  'LDA', 'QDA', 'SVC', 'NSVC', 'LSVC', \
 		  'DT', 'KN', 'RN', 'NC', 'GP', \
-		  'GNB', 'MNB', 'CoNB', 'BNB', 'CaNB', \
+		  'GNB', 'MNB', \
 		  'RF', 'BAG', 'ET', 'AB', 'HGB', 'GB', 'VOT', 'MLP']
 
 qos1_1 = {('sens', 2): {
