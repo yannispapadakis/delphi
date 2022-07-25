@@ -159,7 +159,43 @@ benches_vcpus = {
 	"parsec.x264":
 		{"is_noisy": 0,	"is_sensitive": 0,
 		 "run_mode": "to_completion", "openstack_image": "acticloud-parsec",
-		 "runtime_isolation": {1: 107, 2: 77, 4: 29, 8: 64}}
+		 "runtime_isolation": {1: 107, 2: 77, 4: 29, 8: 64}},
+	"tailbench.img-dnn":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
+		 "runtime_isolation": {1: 112, 2: 314, 4: 1, 8: 1},
+		 "p95": {1: 0.662, 2: 0.742, 4: 0.5, 8: 0.5},
+		 "p99": {1: 0.5, 2: 0.807, 4: 0.5, 8: 0.5}},
+	"tailbench.masstree":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
+		 "runtime_isolation": {2: 287, 4: 1, 8: 1},
+		 "p95": {2: 0.561, 4: 0.5, 8: 0.5},
+		 "p99": {2: 0.835, 4: 0.5, 8: 0.5}},
+	"tailbench.moses":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
+		 "runtime_isolation": {1: 305, 2: 306, 4: 1, 8: 1},
+		 "p95": {1: 0.5, 2: 2.313, 4: 0.5, 8: 0.5},
+		 "p99": {1: 0.5, 2: 2.599, 4: 0.5, 8: 0.5}},
+	"tailbench.shore":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
+		 "runtime_isolation": {2: 331, 4: 1, 8: 1},
+		 "p95": {2: 4.229, 4: 0.5, 8: 0.5},
+		 "p99": {2: 5.432, 4: 0.5, 8: 0.5}},
+	"tailbench.silo":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
+		 "runtime_isolation": {1: 246, 2: 247, 4: 1, 8: 1},
+		 "p95": {1: 0.5, 2: 0.255, 4: 0.5, 8: 0.5},
+		 "p99": {1: 0.5, 2: 0.370, 4: 0.5, 8: 0.5}},
+	"tailbench.sphinx":
+		{"is_noisy": 0,	"is_sensitive": 0,
+		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
+		 "runtime_isolation": {1: 258, 2: 256, 4: 1, 8: 1},
+		 "p95": {1: 0.5, 2: 1570.260, 4: 0.5, 8: 0.5},
+		 "p99": {1: 0.5, 2: 2161.745, 4: 0.5, 8: 0.5}}
 }
 
 benches = [

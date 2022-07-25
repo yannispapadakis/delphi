@@ -16,7 +16,7 @@ parsec_vcpus=$1
 spec_vcpus=$2
 source /root/admin_openrc
 sleep 1
-openstack server start vm1-${parsec_vcpus}_core vm2-${spec_vcpus}_core
+openstack server start vm1-${parsec_vcpus} vm2-${spec_vcpus}_core
 sleep 60
 
 output_file="internal-spec.${spec_vcpus}_parsec.${parsec_vcpus}.txt"
@@ -35,5 +35,6 @@ for parsec in ${parsecs[@]}; do
 	done
 done
 
-openstack server stop vm1-${parsec_vcpus}_core vm2-${spec_vcpus}_core
+kill -15 $internal_pid
+openstack server stop vm1-${parsec_vcpus} vm2-${spec_vcpus}_core
 echo "Parsec (" $parsec_vcpus "vcpus) VS Spec (" $spec_vcpus "vcpus) finished"

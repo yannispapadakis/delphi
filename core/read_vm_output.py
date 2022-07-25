@@ -6,13 +6,14 @@ home_dir = '/'.join(os.getcwd().split('/')[:4]) + '/'
 pairs_dir = home_dir + 'results/coexecutions/'
 perf_dir = home_dir + 'results/isolation_runs/'
 from benchmarks import *
+p95 = True
 
 def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold_vms, \
 			  vms_names, vms_vcpus, vm_times_completed, vm_uuid, vm_times_str):
 	fp = open(filename)
 	excluded = []
 	line = fp.readline()
-	limit_heartbeats = 0
+	limit_hb = [0, 0]
 	while line:
 		tokens = line.split(" - ")
 		if "EVENT" in line:
@@ -40,16 +41,16 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 					vms_boot_time[vm_seq_num] = event_epoch
 					vm_times_str[vm_seq_num] = [event_str]
 					vm_output[vm_seq_num] = []
-					vms_vcpus[vm_seq_num] = int(filename.split('/')[-1].split('.')[0].split('-')[vm_seq_num][-1])
+					vms_vcpus[vm_seq_num] = int(filename.split('/')[-1].split('.')[0].replace("img-dnn", "imgdnn").split('-')[vm_seq_num][-1])
 				elif event_type == "shutdown":
-					limit_heartbeats = 1
+					limit_hb[vm_seq_num] = 1
 				elif event_type == "spawn":
 					vms_vcpus[vm_seq_num] = json_data['vcpus']
 				elif event_type == "heartbeat":
-					if limit_heartbeats == 2:
+					if limit_hb[vm_seq_num] == 2:
 						line = fp.readline()
 						continue
-					if limit_heartbeats == 1: limit_heartbeats = 2
+					if limit_hb[vm_seq_num] == 1 and "tailbench" not in vms_names[vm_seq_num]: limit_hb[vm_seq_num] = 2
 					vm_times_completed[vm_seq_num] += 1
 					vm_event_times[vm_seq_num].append(event_epoch)
 					bench = json_data['bench']
@@ -91,7 +92,12 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 							continue
 						vm_output[vm_seq_num].append(tuple(seconds_list))
 						perf = (seconds_sum / seconds_samples) / base_perf
-
+					elif "tailbench" in bench:
+						tail_name = bench.replace("img-dnn", "imgdnn").split('-')[0].replace("imgdnn", "img-dnn")
+						base_perf = benches_vcpus[tail_name]['p95' if p95 else 'p99'][vcpus]
+						latency = float(output_lines[1].split(' | ')[1 - int(p95)].split()[1])
+						vm_output[vm_seq_num].append(latency)
+						perf = latency / base_perf
 					if perf == 0:
 						if vm_seq_num not in excluded:
 							excluded.append(vm_seq_num)
@@ -137,7 +143,7 @@ def mean_perf_calc(vm_perfs, vm_names, vm_event_times, \
 	for vm in vm_names:
 		name = vm_names[vm]
 		times = vm_times_completed[vm]
-		tokens = name.split('-')
+		tokens = name.replace("img-dnn", "imgdnn").split('-')
 		time_axis = vm_event_times[vm]
 		if len(time_axis) == 1:
 			vm_mean_perf[vm] = 1
@@ -151,15 +157,19 @@ def mean_perf_calc(vm_perfs, vm_names, vm_event_times, \
 		duration_mins = duration / 60.0
 		if 'to_completion' in tokens:
 			spec_name = tokens[3]
-			if 'parsec.' in name: spec_name = tokens[2]
-			try:
-				search = spec_name if 'parsec.' in name else 'parsec.' + spec_name
-				base_time = benches_vcpus[search]['runtime_isolation'][vcpus]
-			except:
-				base_time = benches_vcpus['spec-' + spec_name]['runtime_isolation'][vcpus]
-			duration = sum([base_time * x for x in vm_perfs[vm]])
-			duration_mins = duration / 60.0
-			vm_mean_perf[vm] = min(duration / (base_time * times), np.mean(vm_perfs[vm]))
+			if 'parsec.' in name or "img-dnn" in name: spec_name = tokens[2].replace("imgdnn", "img-dnn")
+			if "tailbench" in spec_name:
+				base_time = benches_vcpus[spec_name]['p95' if p95 else 'p99'][vcpus]
+				vm_mean_perf[vm] = np.mean(vm_perfs[vm])
+			else:
+				try:
+					search = spec_name if 'parsec.' in name else 'parsec.' + spec_name
+					base_time = benches_vcpus[search]['runtime_isolation'][vcpus]
+				except:
+					base_time = benches_vcpus['spec-' + spec_name]['runtime_isolation'][vcpus]
+				duration = sum([base_time * x for x in vm_perfs[vm]])
+				duration_mins = duration / 60.0
+				vm_mean_perf[vm] = min(duration / (base_time * times), np.mean(vm_perfs[vm]))
 		else:
 			weighted_perfs = []
 			for t1 in time_axis[1:]:
@@ -206,7 +216,6 @@ def parse_files(ld = pairs_dir, endswith = '.txt'):
 				 'vm_mean_perf': vm_mean_perf, 'vm_times_completed': vm_times_completed, \
 				 'vm_times_str': vm_times_str, 'vm_uuid': vm_uuid}
 		total_measures[filename] = dicts
-
 	for f in failures:
 		print("From file: " + f[0] + "\n\tVMs removed: " + str(f[1]))
 	return total_measures

@@ -27,7 +27,9 @@ class VmMessagesMonitor():
 				data = ""
 				try:
 					while 1:
-						new_data = conn.recv(1024)
+						try:
+							new_data = conn.recv(1024)
+						except: break
 						if not new_data:
 							break
 						data += new_data
@@ -42,10 +44,10 @@ class VmMessagesMonitor():
 							vm_uuid = json_data["vm_uuid"]
 							time = json_data["time"]
 							output = json_data["output"]
-							(performance, unit) = benchmarks.bench_get_perf_from_output(bench_name, 1,
-							                                                    output)
-							self.actidb_client.insert_heartbeat(vm_uuid, time, performance,
-							                                    bench_name, nr_vcpus)
+							#(performance, unit) = benchmarks.bench_get_perf_from_output(bench_name, 1,
+							#                                                    output)
+							#self.actidb_client.insert_heartbeat(vm_uuid, time, performance,
+							#                                    bench_name, nr_vcpus)
 						elif event == "acticloud-external-openstack-filter-profit-report":
 							hostname = json_data["hostname"]
 							time = json_data["time"]
