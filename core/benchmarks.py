@@ -163,39 +163,39 @@ benches_vcpus = {
 	"tailbench.img-dnn":
 		{"is_noisy": 0,	"is_sensitive": 0,
 		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
-		 "runtime_isolation": {1: 112, 2: 314, 4: 1, 8: 1},
-		 "p95": {1: 0.662, 2: 0.742, 4: 0.5, 8: 0.5},
-		 "p99": {1: 0.5, 2: 0.807, 4: 0.5, 8: 0.5}},
+		 "runtime_isolation": {1: 112, 2: 314, 4: 314, 8: 314},
+		 "p95": {1: 0.662, 2: 0.742, 4: 0.739, 8: 0.777},
+		 "p99": {1: 0.728, 2: 0.807, 4: 0.802, 8: 0.893}},
 	"tailbench.masstree":
 		{"is_noisy": 0,	"is_sensitive": 0,
 		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
-		 "runtime_isolation": {2: 287, 4: 1, 8: 1},
-		 "p95": {2: 0.561, 4: 0.5, 8: 0.5},
-		 "p99": {2: 0.835, 4: 0.5, 8: 0.5}},
+		 "runtime_isolation": {2: 287, 8: 287},
+		 "p95": {2: 0.561, 8: 0.780},
+		 "p99": {2: 0.835, 8: 0.886}},
 	"tailbench.moses":
 		{"is_noisy": 0,	"is_sensitive": 0,
 		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
-		 "runtime_isolation": {1: 305, 2: 306, 4: 1, 8: 1},
-		 "p95": {1: 0.5, 2: 2.313, 4: 0.5, 8: 0.5},
-		 "p99": {1: 0.5, 2: 2.599, 4: 0.5, 8: 0.5}},
+		 "runtime_isolation": {1: 305, 2: 306, 4: 306, 8: 306},
+		 "p95": {1: 2.130, 2: 2.313, 4: 2.530, 8: 2.881},
+		 "p99": {1: 2.499, 2: 2.599, 4: 2.809, 8: 3.186}},
 	"tailbench.shore":
 		{"is_noisy": 0,	"is_sensitive": 0,
 		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
-		 "runtime_isolation": {2: 331, 4: 1, 8: 1},
-		 "p95": {2: 4.229, 4: 0.5, 8: 0.5},
-		 "p99": {2: 5.432, 4: 0.5, 8: 0.5}},
+		 "runtime_isolation": {2: 331, 4: 331, 8: 331},
+		 "p95": {2: 4.229, 4: 4.056, 8: 3.830},
+		 "p99": {2: 5.432, 4: 5.326, 8: 5.159}},
 	"tailbench.silo":
 		{"is_noisy": 0,	"is_sensitive": 0,
 		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
-		 "runtime_isolation": {1: 246, 2: 247, 4: 1, 8: 1},
-		 "p95": {1: 0.5, 2: 0.255, 4: 0.5, 8: 0.5},
-		 "p99": {1: 0.5, 2: 0.370, 4: 0.5, 8: 0.5}},
+		 "runtime_isolation": {1: 246, 2: 247, 4: 247, 8: 247},
+		 "p95": {1: 0.225, 2: 0.255, 4: 0.277, 8: 0.302},
+		 "p99": {1: 0.300, 2: 0.370, 4: 0.384, 8: 0.661}},
 	"tailbench.sphinx":
 		{"is_noisy": 0,	"is_sensitive": 0,
 		 "run_mode": "to_completion", "openstack_image": "parsec-tailbench",
-		 "runtime_isolation": {1: 258, 2: 256, 4: 1, 8: 1},
-		 "p95": {1: 0.5, 2: 1570.260, 4: 0.5, 8: 0.5},
-		 "p99": {1: 0.5, 2: 2161.745, 4: 0.5, 8: 0.5}}
+		 "runtime_isolation": {1: 258, 2: 256, 4: 256, 8: 256},
+		 "p95": {1: 1534.068, 2: 1570.260, 4: 1527.874, 8: 1530.911},
+		 "p99": {1: 2071.398, 2: 2161.745, 4: 2387.787, 8: 1958.239}}
 }
 
 benches = [

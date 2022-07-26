@@ -112,8 +112,7 @@ def generate_vms_list(bench_input):
 		benchmarks.append((bench[0], vcpus))
 
 	runtimes = [bench[0][1]['runtime_isolation'][bench[1]] for bench in benchmarks]
-	max_runtime = 2 * max(runtimes)
-	times_to_run = map(lambda x: 2 * max(runtimes) / x, runtimes)
+	times_to_run = map(lambda x: int(2 * max(runtimes) / x), runtimes)
 	return [{'nr_vcpus': vcpus, 'bench': benchmark, 'times_to_run': times_to_run[i]} for (i, (benchmark, vcpus)) in enumerate(benchmarks)]
 
 def hostnames_to_ip():
