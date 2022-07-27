@@ -228,7 +228,7 @@ def run_benchmarks(benchmarks, port):
 		commands = get_vm_commands(i, benchmark, port, vm_ips[host])
 		hosts.append(host)
 		if "tailbench" in benchmark['bench'][0]:
-			server, client = commands.split("|sc|")
+			server, client = commands.split(sc_split)
 			hosts.append("client")
 			ssh_server = "ssh " + host + " \'" + server + "\' &"
 			ssh_client = "ssh client \'" + client + "\' &"
