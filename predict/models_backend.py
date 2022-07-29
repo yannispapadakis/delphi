@@ -1,3 +1,4 @@
+import sys
 from sklearn.linear_model import LogisticRegression, SGDClassifier, PassiveAggressiveClassifier, Perceptron, RidgeClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from sklearn.svm import SVC, NuSVC, LinearSVC
@@ -141,13 +142,12 @@ def run_model(answers, feature, cl, qos, mod):
 	return acc_score
 
 def help_message(ex):
-	msg =  "Usage:    %s <function> <feature> <qos> <classes> <model>\n" % ex
-	msg += "Function: " + ' | '.join(['test', 'cv']) + '\n'
-	msg += "Feature:  " + ' | '.join(['sens', 'cont']) + '\n'
-	msg += "QoS:      " + ' | '.join(map(str, qos_levels)) + "\n"
-	msg += "Classes:  " + ' | '.join(map(str, [2, 3])) + '\n'
-	msg += "Model:    " + ' | '.join(models)
-	print(msg)
+	print("Usage:    %s <function> <feature> <qos> <classes> <model>\n" % ex + \
+		  "Function: " + ' | '.join(['test', 'cv']) + '\n' + \
+		  "Feature:  " + ' | '.join(['sens', 'cont']) + '\n' + \
+		  "QoS:      " + ' | '.join(map(str, qos_levels)) + "\n" + \
+		  "Classes:  " + ' | '.join(map(str, [2, 3])) + '\n' + \
+		  "Model:    " + ' | '.join(models))
 	return 0
 
 def arg_check(args):

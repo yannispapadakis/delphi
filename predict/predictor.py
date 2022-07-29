@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import random, sys, math, subprocess
+import random, math, subprocess
 from heatmap_reader import *
 from isolation_reader import *
 from models_backend import *
@@ -54,19 +54,19 @@ def prediction(args):
 	(func, feature, qos, class_num, model) = args
 	all_benchmarks = subprocess.run(('ls -rt ' + pairs_dir).split(), stdout = subprocess.PIPE).stdout.decode("utf-8").split('\n')
 	specs = [x + '-' + y for x in all_benchmarks[:28] for y in vcpus]
-	parsecs = [x + '-' + '1' for x in all_benchmarks[28:-1]]
+	parsecs = [x + '-' + y for x in all_benchmarks[28:-1] for y in vcpus if x != "img-dnn"]
 	measures = perf_files(tool)
 	if func == 'cv':
 		exclude = set(measures.keys()).difference(specs)
 		for x in exclude:
 			if x != 'Title': del measures[x]
-		return cross_validation(measures, feature, qos, class_num, model)
+		return cross_validation(measures, feature, float(qos), int(class_num), model)
 	if func == 'test':
 		exclude = set(measures.keys()).difference(specs + parsecs)
 		for x in exclude:
 			if x != 'Title': del measures[x]
-		testing(measures, specs, parsecs, feature, qos, class_num, model)
+		testing(measures, specs, parsecs, feature, float(qos), int(class_num), model)
 
 if __name__ == '__main__':
 	arg_check(sys.argv)
-	prediction(args[1:])
+	prediction(sys.argv[1:])

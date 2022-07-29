@@ -241,7 +241,7 @@ def grid_run(model_str, search_space, mismatch, feature, class_num, qos, fd):
 	for grid_point in list(product(*search_space)):
 		if mismatch(grid_point): continue
 		model = model_library(model_str, grid_point)
-		acc = model_run(model_str, feature, class_num, qos)
+		acc = model_run(model, feature, class_num, qos)
 		max_acc = writer([model_str] + list(grid_point) + [acc], max_acc, fd)
 	return max_acc[1]
 
@@ -270,12 +270,11 @@ def grid_search(args):
 	return 0
 
 def help_message(args):
-	msg =  "Usage:   %s <models> <qos> <feature> <class_num>\n" % args[0]
-	msg += "Models:  " + ' | '.join(models + ['all']) + '\n'
-	msg += "QoS:     " + ' | '.join(['1.1', '1.2', '1.3']) + '\n'
-	msg += "Feature: " + ' | '.join(['sens', 'cont']) + '\n'
-	msg += "Classes: " + ' | '.join(['2', '3']) + '\n'
-	print(msg)
+	print("Usage:   %s <models> <qos> <feature> <class_num>\n" % args[1] + \
+		  "Models:  " + ' | '.join(models + ['all']) + '\n' + \
+		  "QoS:     " + ' | '.join(['1.1', '1.2', '1.3']) + '\n' + \
+		  "Feature: " + ' | '.join(['sens', 'cont']) + '\n' + \
+		  "Classes: " + ' | '.join(['2', '3']) + '\n')
 	return 0
 
 if __name__ == '__main__':
