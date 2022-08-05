@@ -13,9 +13,8 @@ from sklearn.neural_network import MLPClassifier
 qos_levels = [1 + 0.1 * x for x in range(1, 4)]
 models = ['LR', 'SGD', 'PA', 'PER', 'RID', \
 		  'LDA', 'QDA', 'SVC', 'NSVC', 'LSVC', \
-		  'DT', 'KN', 'RN', 'NC', 'GP', \
-		  'GNB', 'MNB', \
-		  'RF', 'BAG', 'ET', 'AB', 'HGB', 'GB', 'VOT', 'MLP']
+		  'DT', 'KN', 'RN', 'NC', 'GP', 'GNB', \
+		  'RF', 'BAG', 'ET', 'AB', 'HGB', 'GB', 'MLP']
 
 qos1_1 = {('sens', 2): {
 			'SVC': SVC(C = 5, kernel = 'poly', degree = 2),
