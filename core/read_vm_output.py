@@ -7,6 +7,7 @@ pairs_dir = home_dir + 'results/coexecutions/'
 perf_dir = home_dir + 'results/isolation_runs/'
 from benchmarks import *
 p95 = True
+excluded_benchmarks = ['shore-1', 'masstree-1', 'masstree-4']
 
 def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold_vms, \
 			  vms_names, vms_vcpus, vm_times_completed, vm_uuid, vm_times_str):
@@ -156,7 +157,7 @@ def mean_perf_calc(vm_perfs, vm_names, vm_event_times, \
 		duration = time_axis[-1] - time_axis[0]
 		duration_mins = duration / 60.0
 		if 'to_completion' in tokens:
-			spec_name = tokens[3]
+			spec_name = tokens[2 if "tailbench" in name else 3]
 			if 'parsec.' in name or "img-dnn" in name: spec_name = tokens[2].replace("imgdnn", "img-dnn")
 			if "tailbench" in spec_name:
 				base_time = benches_vcpus[spec_name]['p95' if p95 else 'p99'][vcpus]

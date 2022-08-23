@@ -8,77 +8,6 @@ import pprint
 sys.path.append('../core/')
 from read_vm_output import *
 
-########################################### PCM Parser ###########################################
-
-def pcm_measures(filename, directory):
-	fd = open(directory + filename)
-	measure = csv.reader(fd, delimiter=',')
-	platform = []
-	measures = OrderedDict()
-
-	for row in measure:
-		if row[0] == "System":
-			label = row[0]
-			for x in row:
-				if x != "":
-					label = x
-				platform.append(label)
-		if row[0] == "Date":
-			for (p, m) in zip(platform, row):
-				measures[(p, m)] = []
-		if row[0].startswith('2'):
-			for (i, x) in enumerate(row):
-				try:
-					measures[measures.keys()[i]].append(float(x))
-				except:
-					measures[measures.keys()[i]].append(x)
-	fd.close()
-	return measures
-
-def cleanup_keys(measures):
-	keys_start = measures.keys()
-
-	for c in keys_start:
-		if 'res%' in c[1] or 'INSTnom' in c[1] or "Date" in c[1] or "Time" in c[1] or c[1] == '':
-			measures.pop(c, None)
-
-def cores_accumulate(measures):
-	keys_start = measures.keys()
-	cores = OrderedDict()
-
-	for c in keys_start:
-		if 'Core' in c[0]:
-			if c[1] not in cores:
-				cores[c[1]] = []
-
-	for x in measures:
-		if 'Core' in x[0]:
-			cores[x[1]] += measures[x]
-
-	return cores
-
-def finalize_measures(filename, measures, cores):
-	final_measures = OrderedDict()
-	final_measures['Benchmark'] = filename.split('.')[1]
-
-	for x in measures:
-		if 'System' in x[0]:
-			final_measures[x[0] + '_' + x[1]] = np.mean(measures[x])
-	for x in cores:
-		final_measures['Cores_' + x] = np.mean(cores[x])
-	final_measures['Vcpus'] = float(filename.split('-')[1].split('.')[0])
-
-	return final_measures
-
-def read_pcm_file(filename, directory):
-	measures = pcm_measures(filename, directory)
-	cleanup_keys(measures)
-	cores = cores_accumulate(measures)
-	return finalize_measures(filename, measures, cores)
-
-''' 36   37  38   39    40     41     42    43    44    45    46    47  48  49     50     51     52     53     54
-    EXEC,IPC,FREQ,AFREQ,L3MISS,L2MISS,L3HIT,L2HIT,L3MPI,L2MPI,L3OCC,LMB,RMB,C0res%,C1res%,C3res%,C6res%,C7res%,TEMP'''
-
 ########################################## PQOS Parser ############################################
 
 def read_pqos_files(pqos_file, run_periods):
@@ -91,7 +20,7 @@ def read_pqos_files(pqos_file, run_periods):
 			for event in events:
 				pqos_measures[event] = []
 		else:
-			time = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") - datetime.timedelta(hours=2)
+			time = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") - datetime.timedelta(hours=3 if 'tailbench' in pqos_file else 2)
 			time = int(time.strftime("%s"))
 			if time < run_periods[0] or time > run_periods[1]:
 				continue
@@ -117,6 +46,8 @@ def read_perf_file(filename, directory, run_periods):
 					start_t = datetime.datetime.strptime(' '.join(tokens[4:]), "%b %d %H:%M:%S %Y")
 					if filename.startswith('parsec'):
 						start_t = start_t - datetime.timedelta(hours=2)
+					if filename.startswith('tailbench'):
+						start_t = start_t - datetime.timedelta(hours=3)
 					start_t = int(start_t.strftime("%s"))
 				line = perf_f.readline()
 				continue
@@ -179,6 +110,7 @@ def attach_pqos(all_measures):
 	run_periods = time_cleanup('pqos')
 	pqos_files = os.listdir(perf_dir + 'pqos/')
 	for pqos_file in list(filter(lambda x: x.endswith('csv'), pqos_files)):
+		if pqos_file.split('.')[1] in excluded_benchmarks: continue
 		bs = ae = alll = 0
 		pqos_f = open(perf_dir + 'pqos/' + pqos_file, 'r')
 		rd = csv.reader(pqos_f)
@@ -189,7 +121,7 @@ def attach_pqos(all_measures):
 				for event in events:
 					pqos_measures[event] = []
 			else:
-				time = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") - datetime.timedelta(hours=2)
+				time = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") - datetime.timedelta(hours=3 if 'tailbench' in pqos_file else 2)
 				time = int(time.strftime("%s"))
 				if time < run_periods[pqos_file.split('.')[1]][0] or time > run_periods[pqos_file.split('.')[1]][1]:
 					continue
@@ -216,7 +148,7 @@ def read_perf_measures():
 		if row[0] == "Benchmark":
 			measures['Title'] = row
 		else:
-			measures[row[0]] = row
+			measures[row[0]] = [row[0]] + map(float, row[1:])
 	return measures
 
 def perf_files(tool = 'pqos'):
@@ -231,24 +163,21 @@ def perf_files(tool = 'pqos'):
 		run_periods = time_cleanup('pqos')
 		for f in list(filter(lambda x: x.endswith('csv'), files)):
 			bench = f.split('.')[1]
+			if bench in excluded_benchmarks: continue
 			measures = read_pqos_files(f, run_periods[bench])
 			for event in measures:
+				if measures[event] == []: print f, event
 				measures[event] = np.mean(measures[event])
-			all_measures[bench] = [bench] + list(measures.values()) + [int(bench.split('-')[1])]
-	elif tool == 'pcm':
-		for f in files:
-			m = read_pcm_file(f, directory)
-			if 'Title' not in all_measures:
-				all_measures['Title'] = m.keys() + ['Class']
-			all_measures[m['Benchmark']] = m.values()
+			all_measures[bench] = [bench] + list(measures.values()) + [int(bench.replace('img-dnn', 'imgdnn').split('-')[1])]
 	elif tool == 'perf':
 		return read_perf_measures()
 		final_title = []
 		run_periods = time_cleanup('perf')
 		for f in list(filter(lambda x: x.endswith('csv'), files)):
+			if f.split('.')[1] in excluded_benchmarks: continue
 			measures = read_perf_file(f, directory, run_periods[f.split('.')[1]])
 			if final_title == []: final_title = measures.keys()
-			elif final_title != measures.keys(): print("Title error on:", f)
+			elif final_title != measures.keys(): print "Title error on:", f
 			all_measures[f.split('.')[1]] = measures
 		if version == '':
 			attach_pqos(all_measures)
@@ -258,7 +187,7 @@ def perf_files(tool = 'pqos'):
 				final_title = list(all_measures[bench].keys())
 				all_measures[bench] = [bench] + list(all_measures[bench].values())
 			all_measures['Title'] = ['Benchmark'] + final_title + ['Class']
-			#write_perf_measures(all_measures)
+			write_perf_measures(all_measures)
 		elif version == 'sp':
 			apply_mean(all_measures)
 			for bench in all_measures:
@@ -273,8 +202,9 @@ def time_cleanup(tool = 'perf'):
 	total_measures = parse_files(directory)
 	run_periods = dict()
 	for f in total_measures:
-		run_periods[f.split('-')[0].replace('_','-')] = (min(total_measures[f]['vm_event_times'][0]), max(total_measures[f]['vm_event_times'][0]))
+		bench_name = f.replace('img-dnn', 'imgdnn').split('-')[0].replace('_','-').replace('imgdnn', 'img-dnn')
+		run_periods[bench_name] = (min(total_measures[f]['vm_event_times'][0]), max(total_measures[f]['vm_event_times'][0]))
 	return run_periods
 
 if __name__ == '__main__':
-	print(perf_files(sys.argv[1]))
+	print perf_files(sys.argv[1])

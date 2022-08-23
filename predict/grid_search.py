@@ -40,7 +40,7 @@ def sgd_grid(feature, class_num, qos, fd):
 	penalties = ['l2', 'l1', 'elasticnet']
 	alphas = map(lambda x: 10 ** (-x), range(3, 6))
 	learning_rates = ['constant', 'optimal', 'invscaling', 'adaptive']
-	etas = [0.0, 1e-2, 1e-1. 1.0]
+	etas = [0.0, 1e-2, 1e-1, 1.0]
 	l1_ratios = [0.25, 0.5, 0.75]
 	max_iters = [10000]
 
@@ -176,7 +176,7 @@ def rf_grid(feature, class_num, qos, fd):
 
 def bag_grid(feature, class_num, qos, fd):
 	n_estimators = [10, 30, 50, 75, 100]
-	base_estimator = [SVC(), SGDClassifier(), KNeighborsClassifier(), LogisticRegression(), None, GaussianProcessClassifier(), GaussianNB(), Perceptron(), RandomForestClassifier()]
+	base_estimator = [SVC(), SGDClassifier(), KNeighborsClassifier(), LogisticRegression(), None, GaussianProcessClassifier(), Perceptron(), RandomForestClassifier()]
 	search_space = [n_estimators, base_estimator]
 	return grid_run("BAG", search_space, lambda x: False, feature, class_num, qos, fd)
 
@@ -267,17 +267,16 @@ def grid_search(args):
 	qos = float(args[2])
 	feature = args[3]
 	class_num = int(args[4])
-	fd = open('_'.join([feature, str(class_num), str(qos), "search.txt"]), 'w')
+	fd_acc = open(csv_dir + 'GridSearch/' + '_'.join([feature, str(class_num), str(qos), ".txt"]), 'w')
+	fd_det = open(csv_dir + 'GridSearch/' + '_'.join(feature, str(class_num), str(qos) + '.csv']), 'a')
 	optimal = []
 
 	for model in grid_models:
-		fd_m = open('_'.join([model, str(qos), feature, str(class_num) + '.csv']), 'w')
-		optimal.append(grid_methods[model](feature, class_num, qos, fd_m))
-		fd_m.close()
+		optimal.append(grid_methods[model](feature, class_num, qos, fd_det))
 	for x in optimal:
-		fd.write(x + '\n')
-	fd.close()
-	return 0
+		fd_acc.write(x + '\n')
+	fd_acc.close()
+	fd_det.close()
 
 def help_message(args):
 	print("Usage:   %s <models> <qos> <feature> <class_num>\n" % args[0] + \
