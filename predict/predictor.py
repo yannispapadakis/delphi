@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import random, math, subprocess
+from itertools import product
 from heatmap_reader import *
 from isolation_reader import *
 from models_backend import *
@@ -16,7 +17,7 @@ def cross_validation(measures, feature, qos, class_num, model):
 
 	answers = dict()
 	acc_scores = []
-	data_name = get_data_name(feature, class_num, model)
+	data_name = get_data_name(feature, class_num, model, qos)
 
 	for test_set in chunks:
 		train_chunks = [x for x in chunks if x != test_set]
@@ -29,16 +30,14 @@ def cross_validation(measures, feature, qos, class_num, model):
 	os.remove(csv_dir + data_name + 'train.csv')
 	os.remove(csv_dir + data_name + 'test.csv')
 	if type(model) == str:
-		#outfile = csv_dir + feature + '_' + str(class_num) + '_' + str(qos) + '_' + model + '.csv'
-		#print_pred(answers, outfile, np.mean(acc_scores))
-		print("CV: " + feature + ' | ' + str(qos) + ' | C:' + str(class_num) + ' | ' + model + ' | ' + str(100 * round(np.mean(acc_scores), 4)) + '%')
-	return np.mean(acc_scores)
+		print("CV: " + feature + ' | ' + str(qos) + ' | C:' + str(class_num) + ' | ' + model + ' ' * (4 - len(model)) + ' | ' + str(100 * round(np.mean(acc_scores), 4)) + '%')
+	return (np.mean(acc_scores), answers)
 
 def testing(measures, train, test, feature, qos, class_num, model):
 	benches = [x for x in measures.keys() if x != "Title"]
 	(classes, whiskers, quartiles) = make_partial_grid(benches, feature, [qos], class_num)
 	answers = dict()
-	data_name = get_data_name(feature, class_num, model)
+	data_name = get_data_name(feature, class_num, model, qos)
 
 	(train_classes, _, _) = make_partial_grid(train, feature, [qos], class_num)
 	csv_writer(measures, train_classes, train, data_name + 'train')
@@ -48,13 +47,15 @@ def testing(measures, train, test, feature, qos, class_num, model):
 	os.remove(csv_dir + data_name + 'test.csv')
 
 	if type(model) == str:
-		print("TEST: " + feature + ' | ' + str(qos) + ' | C:' + str(class_num) + ' | ' + model + ' | ' + str(100 * round(acc_score, 4)) + '%')
+		print_pred(answers, csv_dir + '_'.join([model, feature, str(class_num), str(qos), 'test']) + '.csv', acc_score)
+		print("TEST: " + feature + ' | ' + str(qos) + ' | C:' + str(class_num) + ' | ' + model + ' ' * (4 - len(model))+ ' | ' + str(100 * round(acc_score, 4)) + '%')
 
 def prediction(args):
 	(func, feature, qos, class_num, model) = args
-	all_benchmarks = subprocess.run(('ls -rt ' + pairs_dir).split(), stdout = subprocess.PIPE).stdout.decode("utf-8").split('\n')
-	specs = [x + '-' + y for x in all_benchmarks[:28] for y in vcpus]
-	parsecs = [x + '-' + y for x in all_benchmarks[28:-1] for y in vcpus if x != "img-dnn"]
+	specs = [x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 'spec' in x, benches_vcpus.keys())) for y in vcpus]
+	parsecs = [x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 'parsec' in x, benches_vcpus.keys())) for y in vcpus]
+	tails = list(filter(lambda x: x not in excluded_benchmarks,
+				[x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 'tailbench' in x, benches_vcpus.keys())) for y in vcpus]))
 	measures = perf_files(tool)
 	if func == 'cv':
 		exclude = set(measures.keys()).difference(specs)

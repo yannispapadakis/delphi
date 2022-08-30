@@ -148,7 +148,7 @@ def read_perf_measures():
 		if row[0] == "Benchmark":
 			measures['Title'] = row
 		else:
-			measures[row[0]] = [row[0]] + map(float, row[1:])
+			measures[row[0]] = [row[0]] + list(map(float, row[1:]))
 	return measures
 
 def perf_files(tool = 'pqos'):
@@ -166,7 +166,6 @@ def perf_files(tool = 'pqos'):
 			if bench in excluded_benchmarks: continue
 			measures = read_pqos_files(f, run_periods[bench])
 			for event in measures:
-				if measures[event] == []: print f, event
 				measures[event] = np.mean(measures[event])
 			all_measures[bench] = [bench] + list(measures.values()) + [int(bench.replace('img-dnn', 'imgdnn').split('-')[1])]
 	elif tool == 'perf':
@@ -177,7 +176,7 @@ def perf_files(tool = 'pqos'):
 			if f.split('.')[1] in excluded_benchmarks: continue
 			measures = read_perf_file(f, directory, run_periods[f.split('.')[1]])
 			if final_title == []: final_title = measures.keys()
-			elif final_title != measures.keys(): print "Title error on:", f
+			elif final_title != measures.keys(): print("Title error on:", f)
 			all_measures[f.split('.')[1]] = measures
 		if version == '':
 			attach_pqos(all_measures)
@@ -207,4 +206,4 @@ def time_cleanup(tool = 'perf'):
 	return run_periods
 
 if __name__ == '__main__':
-	print perf_files(sys.argv[1])
+	perf_files(sys.argv[1])

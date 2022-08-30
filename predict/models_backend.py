@@ -16,53 +16,61 @@ models = ['LR', 'SGD', 'PA', 'PER', 'RID', \
 		  'DT', 'KN', 'RN', 'NC', 'GP', 'GNB', \
 		  'RF', 'BAG', 'ET', 'AB', 'HGB', 'GB', 'MLP']
 
-qos1_1 = {('sens', 2): {
-			'SVC': SVC(C = 5, kernel = 'poly', degree = 2),
-			'DT' : DecisionTreeClassifier(criterion = 'entropy', splitter = 'best', min_samples_split = 6, min_samples_leaf = 4, max_features = 'sqrt'),
-			'KN' : KNeighborsClassifier(n_neighbors = 4, weights = 'distance', algorithm = 'kd_tree', leaf_size = 20, p = 1),
-			'RF' : RandomForestClassifier(n_estimators = 45, criterion = 'entropy', min_samples_split = 7, min_samples_leaf = 7, max_features = 'sqrt', bootstrap = False)},
-		('sens', 3): {
-			'SVC': SVC(C = 4, kernel = 'linear', degree = 3),
-			'DT' : DecisionTreeClassifier(criterion = 'gini', splitter = 'best', min_samples_split = 9, min_samples_leaf = 4, max_features = 'log2'),
-			'KN' : KNeighborsClassifier(n_neighbors = 4, weights = 'distance', algorithm = 'kd_tree', leaf_size = 5, p = 1),
-			'RF' : RandomForestClassifier(n_estimators = 50, criterion = 'entropy', min_samples_split = 8, min_samples_leaf = 4, max_features = 'log2', bootstrap = False)},
-		('cont', 2): {
-			'SVC': SVC(C = 5, kernel = 'linear', degree = 3),
-			'DT' : DecisionTreeClassifier(criterion = 'gini', splitter = 'best', min_samples_split = 5, min_samples_leaf = 5, max_features = 'log2'),
-			'KN' : KNeighborsClassifier(n_neighbors = 7, weights = 'uniform', algorithm = 'ball_tree', leaf_size = 5, p = 1),
-			'RF' : RandomForestClassifier(n_estimators = 35, criterion = 'gini', min_samples_split = 7, min_samples_leaf = 4, max_features = 'log2', bootstrap = True)},
-		('cont', 3): {
-			'SVC': SVC(C = 9, kernel = 'linear', degree = 3),
-			'DT' : DecisionTreeClassifier(criterion = 'gini', splitter = 'best', min_samples_split = 6, min_samples_leaf = 8, max_features = 'log2'),
-			'KN' : KNeighborsClassifier(n_neighbors = 7, weights = 'uniform', algorithm = 'kd_tree', leaf_size = 5, p = 1),
-			'RF' : RandomForestClassifier(n_estimators = 40, criterion = 'gini', min_samples_split = 8, min_samples_leaf = 4, max_features = 'log2', bootstrap = True)}}
+def model_library(model_str, gp):
+	if model_str == "LR":   return LogisticRegression(penalty = gp[0], tol = gp[1], C = gp[2], solver = gp[3], l1_ratio = gp[4], max_iter = gp[5])
+	if model_str == "PA":   return PassiveAggressiveClassifier(C = gp[0], tol = gp[1], loss = gp[2])
+	if model_str == "SGD":  return SGDClassifier(loss = gp[0], penalty = gp[1], alpha = gp[2], learning_rate = gp[3], eta0 = gp[4], l1_ratio = gp[5], max_iter = gp[6])
+	if model_str == "PER":  return Perceptron(penalty = gp[0], tol = gp[1], eta0 = gp[2], alpha = gp[3])
+	if model_str == "RID":  return RidgeClassifier(alpha = gp[0], tol = gp[1], solver = gp[2])
+	if model_str == "LDA":  return LinearDiscriminantAnalysis(solver = gp[0], tol = gp[1], shrinkage = gp[2])
+	if model_str == "QDA":  return QuadraticDiscriminantAnalysis(tol = gp[0], reg_param = gp[1])
+	if model_str == "SVC":  return SVC(C = gp[0], kernel = gp[1], degree = gp[2], gamma = gp[3], tol = gp[4])
+	if model_str == "NSVC": return NuSVC(nu = gp[0], kernel = gp[1], degree = gp[2], gamma = gp[3], tol = gp[4])
+	if model_str == "LSVC": return LinearSVC(penalty = gp[0], loss = gp[1], tol = gp[2], C = gp[3], max_iter = gp[4])
+	if model_str == "KN":   return KNeighborsClassifier(n_neighbors = gp[0], weights = gp[1], algorithm = gp[2], leaf_size = gp[3], p = gp[4])
+	if model_str == "RN":   return RadiusNeighborsClassifier(radius = gp[0], weights = gp[1], algorithm = gp[2], leaf_size = gp[3], p = gp[4], outlier_label = gp[5])
+	if model_str == "NC":   return NearestCentroid(shrink_threshold = gp[0], metric = gp[1])
+	if model_str == "GP":   return GaussianProcessClassifier()
+	if model_str == "GNB":  return GaussianNB(var_smoothing = gp[0])
+	if model_str == "DT":   return DecisionTreeClassifier(criterion = gp[0], splitter = gp[1], min_samples_split = gp[2], min_samples_leaf = gp[3], max_features = gp[4])
+	if model_str == "RF":   return RandomForestClassifier(n_estimators = gp[0], criterion = gp[1], min_samples_split = gp[2], min_samples_leaf = gp[3], max_features = gp[4])
+	if model_str == "BAG":  return BaggingClassifier(n_estimators = gp[0], base_estimator = gp[1])
+	if model_str == "ET":   return ExtraTreesClassifier(n_estimators = gp[0], criterion = gp[1], min_samples_split = gp[2], min_samples_leaf = gp[3], max_features = gp[4])
+	if model_str == "AB":   return AdaBoostClassifier(base_estimator = gp[0], n_estimators = gp[1], algorithm = gp[2])
+	if model_str == "HGB":  return HistGradientBoostingClassifier(loss = gp[0], max_leaf_nodes = gp[1])
+	if model_str == "GB":   return GradientBoostingClassifier(loss = gp[0], n_estimators = gp[1], criterion = gp[2], min_samples_split = gp[3], min_samples_leaf = gp[4], max_features = gp[5])
+	if model_str == "MLP":  return MLPClassifier(activation = gp[0], solver = gp[1], alpha = gp[2], learning_rate = gp[3], max_iter = gp[4])
 
-qos1_2 = {('sens', 2): {
-			'SVC': SVC(C = 4, kernel = 'linear', degree = 3),
-			'DT' : DecisionTreeClassifier(criterion = 'entropy', splitter = 'random', min_samples_split = 2, min_samples_leaf = 2, max_features = None),
-			'KN' : KNeighborsClassifier(n_neighbors = 6, weights = 'distance', algorithm = 'ball_tree', leaf_size = 15, p = 3),
-			'RF' : RandomForestClassifier(n_estimators = 45, criterion = 'entropy', min_samples_split = 2, min_samples_leaf = 4, max_features = 'log2', bootstrap = False)},
-		('sens', 3): {
-			'SVC': SVC(C = 8, kernel = 'rbf', degree = 3),
-			'DT' : DecisionTreeClassifier(criterion = 'gini', splitter = 'best', min_samples_split = 8, min_samples_leaf = 8, max_features = 'sqrt'),
-			'KN' : KNeighborsClassifier(n_neighbors = 8, weights = 'distance', algorithm = 'kd_tree', leaf_size = 15, p = 3),
-			'RF' : RandomForestClassifier(n_estimators = 40, criterion = 'entropy', min_samples_split = 5, min_samples_leaf = 4, max_features = 'sqrt', bootstrap = False)},
-		('cont', 2): {
-			'SVC': SVC(C = 5, kernel = 'poly', degree = 1),
-			'DT' : DecisionTreeClassifier(criterion = 'gini', splitter = 'best', min_samples_split = 7, min_samples_leaf = 5, max_features = 'log2'),
-			'KN' : KNeighborsClassifier(n_neighbors = 7, weights = 'uniform', algorithm = 'ball_tree', leaf_size = 10, p = 1),
-			'RF' : RandomForestClassifier(n_estimators = 40, criterion = 'gini', min_samples_split = 6, min_samples_leaf = 4, max_features = 'log2', bootstrap = True)},
-		('cont', 3): {
-			'SVC': SVC(C = 2, kernel = 'linear', degree = 3),
-			'DT' : DecisionTreeClassifier(criterion = 'gini', splitter = 'best', min_samples_split = 4, min_samples_leaf = 6, max_features = 'log2'),
-			'KN' : KNeighborsClassifier(n_neighbors = 7, weights = 'uniform', algorithm = 'ball_tree', leaf_size = 10, p = 1),
-			'RF' : RandomForestClassifier(n_estimators = 45, criterion = 'entropy', min_samples_split = 4, min_samples_leaf = 5, max_features = 'log2', bootstrap = True)}}
-
-def select_model(mod, feature, cl, qos):
-	if qos <= 1.15:
-		return qos1_1[(feature, cl)][mod]
-	else:
-		return qos1_2[(feature, cl)][mod]
+def select_model(model, feature, cl, qos):
+	run = 'spec/'
+	grid_fd = open(csv_dir + "GridSearch/" + run + '_'.join([feature, str(cl), str(qos)]) + '.txt', 'r')
+	line = grid_fd.readline()
+	while line:
+		tokens = line.split('\t')
+		if model == tokens[0]:
+			gp = tokens[1:]
+			while tokens[-1] != '\n':
+				line = grid_fd.readline()
+				tokens = line.split('\t')
+			if gp[-1] != '\n':
+				gp = [gp[0].split('(')[0] + '()'] + tokens[1:-2]
+			else:
+				gp = tokens[1:-2]
+			break
+		line = grid_fd.readline()
+	gp_fixed = []
+	for point in gp:
+		if '.' in point or 'e-' in point: gp_fixed.append(float(point))
+		elif all(c.isdigit() for c in point): gp_fixed.append(int(point))
+		elif 'None' in point: gp_fixed.append(None)
+		elif '(' in point:
+			classifiers = {'SVC()': SVC(), 'SGDClassifier()': SGDClassifier(), 'KNeighborsClassifier()': KNeighborsClassifier(), \
+						   'LogisticRegression()': LogisticRegression(), 'DecisionTree()': DecisionTreeClassifier(), \
+						   'GaussianProcessClassifier()': GaussianProcessClassifier(), 'Perceptron()': Perceptron(), \
+						   'RandomForestClassifier()': RandomForestClassifier(), 'GaussianNB()': GaussianNB()}
+			gp_fixed.append(classifiers[point])
+		else: gp_fixed.append(point)
+	return model_library(model, gp_fixed)
 
 #-------------------- Tools --------------------
 import csv
@@ -97,18 +105,18 @@ def print_pred(answers, outfile, acc):
 	writer.writerow(last_row)
 	fd.close()
 
-def get_data_name(feature, cl, mod):
+def get_data_name(feature, cl, mod, qos):
 	if type(mod) == str:
-		return feature + str(cl) + mod
+		return feature + str(cl) + mod + str(qos)
 	modd = str(type(mod)).split('.')[-1].split("'")[0]
 	if modd == 'DecisionTreeClassifier': modd = 'DT'
 	if modd == 'KNeighbors': modd = 'KN'
 	if modd == 'RandomForest': modd = 'RF'
-	return feature + str(cl) + modd
+	return feature + str(cl) + modd + str(qos)
 
 def run_model(answers, feature, cl, qos, mod):
-	train_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod) + 'train.csv')
-	test_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod) + 'test.csv')
+	train_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod, qos) + 'train.csv')
+	test_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod, qos) + 'test.csv')
 
 	if feature == 'cont': remove_cols = [0, 2, 3, 4, 5, 6, 8, 15]
 	if feature == 'sens': remove_cols = [0, 8, 13, 15]

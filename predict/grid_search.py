@@ -1,21 +1,21 @@
 #!/usr/bin/python3
 import sys
-from itertools import product
 from predictor import *
 
 def model_run(model, feature, class_num, qos):
 	acc = []
 	for i in range(10):
-		acc.append(prediction(['cv', feature, qos, class_num, model]))
-	return np.mean(acc)
+		answer = prediction(['cv', feature, qos, class_num, model])
+		acc.append(answer)
+	return (np.mean(list(map(lambda x: x[0], acc))), max(acc, key = lambda x: x[0])[1])
 
-def writer(config, max_acc, fd):
+def writer(config, answers, max_acc, fd):
 	acc = config[-1]
 	config = list(map(str, config))
 	config = ''.join([it for sublist in zip(config, ['\t' for i in range(len(config))]) for it in sublist])
 	fd.write(config + '\n')
 	print(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '\t' + config)
-	return (acc, config) if acc > max_acc[0] else max_acc
+	return (acc, config, answers) if acc > max_acc[0] else max_acc
 
 def lr_grid(feature, class_num, qos, fd):
 	penalties = ['l1', 'l2', 'elasticnet', 'none']
@@ -175,9 +175,9 @@ def rf_grid(feature, class_num, qos, fd):
 	return grid_run("RF", search_space, lambda x: False, feature, class_num, qos, fd)
 
 def bag_grid(feature, class_num, qos, fd):
-	n_estimators = [10, 30, 50, 75, 100]
 	base_estimator = [SVC(), SGDClassifier(), KNeighborsClassifier(), LogisticRegression(), None, GaussianProcessClassifier(), Perceptron(), RandomForestClassifier()]
-	search_space = [n_estimators, base_estimator]
+	n_estimators = [10, 30, 50, 75, 100]
+	search_space = [base_estimator, n_estimators]
 	return grid_run("BAG", search_space, lambda x: False, feature, class_num, qos, fd)
 
 def et_grid(feature, class_num, qos, fd):
@@ -222,38 +222,13 @@ def mlp_grid(feature, class_num, qos, fd):
 	return grid_run("MLP", search_space, lambda x: False, feature, class_num, qos, fd)
 
 def grid_run(model_str, search_space, mismatch, feature, class_num, qos, fd):
-	def model_library(model_str, gp):
-		if model_str == "LR":   return LogisticRegression(penalty = gp[0], tol = gp[1], C = gp[2], solver = gp[3], l1_ratio = gp[4], max_iter = gp[5])
-		if model_str == "PA":   return PassiveAggressiveClassifier(C = gp[0], tol = gp[1], loss = gp[2])
-		if model_str == "SGD":  return SGDClassifier(loss = gp[0], penalty = gp[1], alpha = gp[2], learning_rate = gp[3], eta0 = gp[4], l1_ratio = gp[5], max_iter = gp[6])
-		if model_str == "PER":  return Perceptron(penalty = gp[0], tol = gp[1], eta0 = gp[2], alpha = gp[3])
-		if model_str == "RID":  return RidgeClassifier(alpha = gp[0], tol = gp[1], solver = gp[2])
-		if model_str == "LDA":  return LinearDiscriminantAnalysis(solver = gp[0], tol = gp[1], shrinkage = gp[2])
-		if model_str == "QDA":  return QuadraticDiscriminantAnalysis(tol = gp[0], reg_param = gp[1])
-		if model_str == "SVC":  return SVC(C = gp[0], kernel = gp[1], degree = gp[2], gamma = gp[3], tol = gp[4])
-		if model_str == "NSVC": return NuSVC(nu = gp[0], kernel = gp[1], degree = gp[2], gamma = gp[3], tol = gp[4])
-		if model_str == "LSVC": return LinearSVC(penalty = gp[0], loss = gp[1], tol = gp[2], C = gp[3], max_iter = gp[4])
-		if model_str == "KN":   return KNeighborsClassifier(n_neighbors = gp[0], weights = gp[1], algorithm = gp[2], leaf_size = gp[3], p = gp[4])
-		if model_str == "RN":   return RadiusNeighborsClassifier(radius = gp[0], weights = gp[1], algorithm = gp[2], leaf_size = gp[3], p = gp[4], outlier_label = gp[5])
-		if model_str == "NC":   return NearestCentroid(shrink_threshold = gp[0], metric = gp[1])
-		if model_str == "GP":   return GaussianProcessClassifier()
-		if model_str == "GNB":  return GaussianNB(var_smoothing = gp[0])
-		if model_str == "DT":   return DecisionTreeClassifier(criterion = gp[0], splitter = gp[1], min_samples_split = gp[2], min_samples_leaf = gp[3], max_features = gp[4])
-		if model_str == "RF":   return RandomForestClassifier(n_estimators = gp[0], criterion = gp[1], min_samples_split = gp[2], min_samples_leaf = gp[3], max_features = gp[4])
-		if model_str == "BAG":  return BaggingClassifier(n_estimators = gp[0], base_estimator = gp[1])
-		if model_str == "ET":   return ExtraTreesClassifier(n_estimators = gp[0], criterion = gp[1], min_samples_split = gp[2], min_samples_leaf = gp[3], max_features = gp[4])
-		if model_str == "AB":   return AdaBoostClassifier(base_estimator = gp[0], n_estimators = gp[1], algorithm = gp[2])
-		if model_str == "HGB":  return HistGradientBoostingClassifier(loss = gp[0], max_leaf_nodes = gp[1])
-		if model_str == "GB":   return GradientBoostingClassifier(loss = gp[0], n_estimators = gp[1], criterion = gp[2], min_samples_split = gp[3], min_samples_leaf = gp[4], max_features = gp[5])
-		if model_str == "MLP":  return MLPClassifier(activation = gp[0], solver = gp[1], alpha = gp[2], learning_rate = gp[3], max_iter = gp[4])
-
 	max_acc = (0, "")
 	for grid_point in list(product(*search_space)):
 		if mismatch(grid_point): continue
 		model = model_library(model_str, grid_point)
-		acc = model_run(model, feature, class_num, qos)
-		max_acc = writer([model_str] + list(grid_point) + [acc], max_acc, fd)
-	return max_acc[1]
+		(acc, answers) = model_run(model, feature, class_num, qos)
+		max_acc = writer([model_str] + list(grid_point) + [acc], answers, max_acc, fd)
+	return max_acc
 
 grid_methods = {'LR': lr_grid, 'PA': pa_grid, 'SGD': sgd_grid, 'PER': per_grid, 'RID': rid_grid, \
 				'LDA': lda_grid, 'QDA': qda_grid, 'SVC': svc_grid, 'NSVC': nsvc_grid, 'LSVC': lsvc_grid, \
@@ -267,14 +242,14 @@ def grid_search(args):
 	qos = float(args[2])
 	feature = args[3]
 	class_num = int(args[4])
-	fd_acc = open(csv_dir + 'GridSearch/' + '_'.join([feature, str(class_num), str(qos), ".txt"]), 'w')
-	fd_det = open(csv_dir + 'GridSearch/' + '_'.join(feature, str(class_num), str(qos) + '.csv']), 'a')
-	optimal = []
+	fd_acc = open(csv_dir + 'GridSearch/' + '_'.join([feature, str(class_num), str(qos)]) + ".txt", 'w')
+	fd_det = open(csv_dir + 'GridSearch/' + '_'.join([feature, str(class_num), str(qos)]) + '.csv', 'a')
 
 	for model in grid_models:
-		optimal.append(grid_methods[model](feature, class_num, qos, fd_det))
-	for x in optimal:
-		fd_acc.write(x + '\n')
+		(acc, config, answers) = grid_methods[model](feature, class_num, qos, fd_det)
+		fd_acc.write(config + '\n')
+		outfile = csv_dir + '_'.join([model, feature, str(class_num), str(qos), 'cv']) + '.csv'
+		print_pred(answers, outfile, acc)
 	fd_acc.close()
 	fd_det.close()
 
