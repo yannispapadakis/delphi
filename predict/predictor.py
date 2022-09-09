@@ -1,8 +1,6 @@
 #!/usr/bin/python3
-import random, math, subprocess
 from itertools import product
 from heatmap_reader import *
-from isolation_reader import *
 from models_backend import *
 
 tool = 'perf'
@@ -58,7 +56,7 @@ def prediction(args):
 				[x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 'tailbench' in x, benches_vcpus.keys())) for y in vcpus]))
 	measures = perf_files(tool)
 	if func == 'cv':
-		exclude = set(measures.keys()).difference(specs)
+		exclude = set(measures.keys()).difference(specs + parsecs)
 		for x in exclude:
 			if x != 'Title': del measures[x]
 		return cross_validation(measures, feature, float(qos), int(class_num), model)

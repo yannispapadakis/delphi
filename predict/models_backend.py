@@ -43,7 +43,7 @@ def model_library(model_str, gp):
 
 def select_model(model, feature, cl, qos):
 	run = 'spec/'
-	grid_fd = open(csv_dir + "GridSearch/" + run + '_'.join([feature, str(cl), str(qos)]) + '.txt', 'r')
+	grid_fd = open(results_dir + "GridSearch/" + run + '_'.join([feature, str(cl), str(qos)]) + '.txt', 'r')
 	line = grid_fd.readline()
 	while line:
 		tokens = line.split('\t')
@@ -76,10 +76,10 @@ def select_model(model, feature, cl, qos):
 import csv
 import pandas as pd
 from sklearn import preprocessing
-from heatmap_reader import csv_dir
+from heatmap_reader import results_dir
 
 def csv_writer(measures, classes, benches, mode):
-	out_file = csv_dir + mode + '.csv'
+	out_file = results_dir + mode + '.csv'
 	fd = open(out_file, mode='w')
 	writer = csv.writer(fd, delimiter=',')
 	writer.writerow(measures['Title'])
@@ -115,8 +115,8 @@ def get_data_name(feature, cl, mod, qos):
 	return feature + str(cl) + modd + str(qos)
 
 def run_model(answers, feature, cl, qos, mod):
-	train_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod, qos) + 'train.csv')
-	test_data = pd.read_csv(csv_dir + get_data_name(feature, cl, mod, qos) + 'test.csv')
+	train_data = pd.read_csv(results_dir + get_data_name(feature, cl, mod, qos) + 'train.csv')
+	test_data = pd.read_csv(results_dir + get_data_name(feature, cl, mod, qos) + 'test.csv')
 
 	if feature == 'cont': remove_cols = [0, 2, 3, 4, 5, 6, 8, 15]
 	if feature == 'sens': remove_cols = [0, 8, 13, 15]

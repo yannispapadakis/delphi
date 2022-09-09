@@ -1,75 +1,9 @@
 #!/usr/bin/python
 import sys
 sys.path.append("../core/")
-from vm_messages_monitor import *
-from execute import *
+from benchmarks import *
 import libvirt_client
-sys.path.append('/home/ypap/actimanager/common/')
 import shell_command
-
-vm_header = \
-"""export VMUUID=$(basename $(readlink -f /var/lib/cloud/instance)); echo "{\\"vm_uuid\\": \\"$VMUUID\\", \\"vm_seq_num\\": 0, \\"event\\": \\"boot\\" , \\"time\\": \\"`date +%%F.%%T`\\"}" | nc -N 10.0.0.8 %(port)d;"""
-
-client_header = \
-"""export SUUID=%(suuid)s; export VMUUID=$(basename $(readlink -f /var/lib/cloud/instance)); echo "{\\"vm_uuid\\": \\"$VMUUID\\", \\"vm_seq_num\\": 0, \\"event\\": \\"boot\\" , \\"time\\": \\"`date +%%F.%%T`\\"}" | nc -N 10.0.0.8 %(port)d;"""
-
-vm_footer = \
-"""echo "{\\"vm_uuid\\": \\"$VMUUID\\", \\"vm_seq_num\\": 0, \\"event\\": \\"shutdown\\" , \\"time\\": \\"`date +%%F.%%T`\\"}" | nc -N 10.0.0.8 %(port)d; exit 0"""
-
-vm_spec = \
-"""cd /opt/spec-parsec-benchmarks/spec/
-for t in `seq 0 $((%(times_to_run)d-1))`; do 
-{
-	echo "EXECUTION NUMBER $t"
-	for i in `seq 0 $((%(vcpus)d-2))`; do
-		./cslab_run_specs_static.sh %(bench)s $i &
-		sleep 5
-	done
-	./cslab_run_specs_static.sh %(bench)s $((%(vcpus)d-1))
-	wait
-} &> /tmp/tosend
-echo "{\\"vm_uuid\\": \\"$VMUUID\\", \\"vm_seq_num\\": 0, \\"event\\": \\"heartbeat\\", \
-\\"bench\\": \\"spec-%(bench)s-to-completion\\", \\"vcpus\\": %(vcpus)d, \\"output\\": \\"`cat /tmp/tosend | tr \\"\\n\\" \\";\\" | tr \\"\\\\"\\" \\"^\\"`\\", \\"time\\": \\"`date +%%F.%%T`\\"}" | nc -N 10.0.0.8 %(port)d
-done
-"""
-
-vm_parsec = \
-"""cd /opt/parsec-benchmark/
-source env.sh
-for t in `seq 0 $((%(times_to_run)d-1))`; do 
-{
-	echo "EXECUTION NUMBER $t"
-	parsecmgmt -a run -p %(bench)s -i native -n $((%(vcpus)d)) > log/amd64-linux.gcc/run_output.out; tail -n 10 log/amd64-linux.gcc/run_output.out | head -n 1 | ./time_conversion.py
-	wait
-} &> /tmp/tosend
-echo "{\\"vm_uuid\\": \\"$VMUUID\\", \\"vm_seq_num\\": 0, \\"event\\": \\"heartbeat\\", \
-\\"bench\\": \\"%(bench)s-to-completion\\", \\"vcpus\\": %(vcpus)d, \\"output\\": \\"`cat /tmp/tosend | tr \\"\\n\\" \\";\\" | tr \\"\\\\"\\" \\"^\\"`\\", \\"time\\": \\"`date +%%F.%%T`\\"}" | nc -N 10.0.0.8 %(port)d
-done
-"""
-
-tailbench_server = \
-"""cd /opt/tailbench-v0.9
-for t in `seq 0 $((%(times_to_run)d-1))`; do
-{
-	echo "EXECUTION NUMBER $t"
-	./server_run.sh %(bench)s
-	wait
-} &> /tmp/tosend
-done
-"""
-
-tailbench_client = \
-"""cd /opt/tailbench-v0.9
-for t in `seq 0 $((%(times_to_run)d-1))`; do
-{
-	echo "EXECUTION NUMBER $t"
-	./client_run.sh %(bench)s %(ip)s
-	wait
-} &> /tmp/tosend
-echo "{\\"vm_uuid\\": \\"$SUUID\\", \\"vm_seq_num\\": 0, \\"event\\": \\"heartbeat\\", \
-\\"bench\\": \\"tailbench.%(bench)s-to-completion\\", \\"vcpus\\": %(vcpus)d, \\"output\\": \\"`cat /tmp/tosend | tr \\"\\n\\" \\";\\" | tr \\"\\\\"\\" \\"^\\"`\\", \\"time\\": \\"`date +%%F.%%T`\\"}" | nc -N 10.0.0.8 %(port)d
-done
-"""
 
 def hostnames_to_ip():
 	f = open("/root/.ssh/config")
@@ -93,23 +27,23 @@ def get_vm_commands(bench, port, ip):
 	udata = ""
 	
 	logger.info("Spawned new VM with seq_num: 0 and name: %s", vm_name)
-	udata = vm_header % {"port": port}
+	udata = vm_header % {"port": port, "seq_num": 0}
 	if "spec-" in bench_name:
 		spec_bench = bench_name.split('-')[1]
-		udata += vm_spec % {"vcpus": vcpus, "times_to_run": 1,
+		udata += vm_spec % {"vcpus": vcpus, "times_to_run": 1, "seq_num": 0,
 							"bench": spec_bench, "port": port}
 	elif "parsec" in bench_name:
-		udata += vm_parsec % {"vcpus": vcpus, "times_to_run": 1,
+		udata += vm_parsec % {"vcpus": vcpus, "times_to_run": 1, "seq_num": 0,
 							  "bench": bench_name, "port": port}
 	elif "tailbench" in bench_name:
 		udata += tailbench_server % {"times_to_run": 1, "bench": bench_name.split('.')[1]}
-		udata += vm_footer % {"port": port}
+		udata += vm_footer % {"port": port, "seq_num": 0}
 		udata += sc_split
 		suuid = subprocess.check_output("ssh root@10.0.100." + ip + " 'echo $(basename $(readlink -f /var/lib/cloud/instance))'", shell = True)[:-1]
-		udata += client_header % {"suuid": suuid, "port": port}
-		udata += tailbench_client % {"vcpus": vcpus, "ip": ip, "times_to_run": 1,
+		udata += client_header % {"suuid": suuid, "port": port, "seq_num": 0}
+		udata += tailbench_client % {"vcpus": vcpus, "ip": ip, "times_to_run": 1, "seq_num": 0,
 									 "bench": bench_name.split('.')[1], "port": port}
-	udata += vm_footer % {"port": port}
+	udata += vm_footer % {"port": port, "seq_num": 0}
 	return udata
 
 def ssh_command_pid(host):
@@ -140,7 +74,7 @@ def execute_perf(tool, ip):
 
 	if tool == 'pqos':
 		cores = "[0-" + str(bench[2] - 1) + "]" if bench[2] > 1 else "0"
-		tool_cmd = "pqos -m all: %(cores)s -r -o %(output)s -u csv -i %(int)s &" \
+		tool_cmd = "pqos -m all:%(cores)s -r -o %(output)s -u csv -i %(int)s &" \
 				   % {"cores": cores, "output": output_file, "int": str(interval * 10)}
 	elif tool == "perf":
 		pid = vm_pid(ip)

@@ -1,7 +1,5 @@
 from sklearn.ensemble import RandomForestRegressor 
 import pandas as pd
-import sys, random
-from isolation_reader import *
 from heatmap_reader import *
 
 def pair_perf(measures):

@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-import sys
 from predictor import *
 
 def model_run(model, feature, class_num, qos):
@@ -242,13 +241,13 @@ def grid_search(args):
 	qos = float(args[2])
 	feature = args[3]
 	class_num = int(args[4])
-	fd_acc = open(csv_dir + 'GridSearch/' + '_'.join([feature, str(class_num), str(qos)]) + ".txt", 'w')
-	fd_det = open(csv_dir + 'GridSearch/' + '_'.join([feature, str(class_num), str(qos)]) + '.csv', 'a')
+	fd_acc = open(results_dir + 'GridSearch/' + '_'.join([feature, str(class_num), str(qos)]) + ".txt", 'w')
+	fd_det = open(results_dir + 'GridSearch/' + '_'.join([feature, str(class_num), str(qos)]) + '.csv', 'a')
 
 	for model in grid_models:
 		(acc, config, answers) = grid_methods[model](feature, class_num, qos, fd_det)
 		fd_acc.write(config + '\n')
-		outfile = csv_dir + '_'.join([model, feature, str(class_num), str(qos), 'cv']) + '.csv'
+		outfile = results_dir + '_'.join([model, feature, str(class_num), str(qos), 'cv']) + '.csv'
 		print_pred(answers, outfile, acc)
 	fd_acc.close()
 	fd_det.close()

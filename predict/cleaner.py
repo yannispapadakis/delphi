@@ -36,8 +36,8 @@ def clean(filename):
 	os.rename('output.txt', filename)
 
 def parse_all_files(folders):
-	pairs_dir = '/home/ypap/delphi/results/coexecutions/'
-	benchmarks  = subprocess.check_output('ls -rt ' + pairs_dir, shell = True).split("\n")[28:-1]
+	coexecutions_dir = '/home/ypap/delphi/results/coexecutions/'
+	benchmarks  = subprocess.check_output('ls -rt ' + coexecutions_dir, shell = True).split("\n")[28:-1]
 	to_clean = list()
 	if len(folders):
 		if 'all' in folders: to_clean = benchmarks
@@ -47,8 +47,8 @@ def parse_all_files(folders):
 					folders.pop(folders.index(bench))
 			to_clean = folders
 	for bench in to_clean:
-		for comb in os.listdir(pairs_dir + bench):
-			ld = pairs_dir + bench + '/' + comb
+		for comb in os.listdir(coexecutions_dir + bench):
+			ld = coexecutions_dir + bench + '/' + comb
 			for filename in os.listdir(ld):
 				clean(ld + '/' + filename)
 		print bench, "cleaned"

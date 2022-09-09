@@ -1,17 +1,12 @@
 #!/usr/bin/python
-import os, csv, sys
-import numpy as np
-from scipy.stats.mstats import gmean
-from collections import OrderedDict
-from operator import add
-import pprint
+import sys
 sys.path.append('../core/')
 from read_vm_output import *
 
 ########################################## PQOS Parser ############################################
 
 def read_pqos_files(pqos_file, run_periods):
-	pqos_f = open(perf_dir + 'pqos/' + pqos_file, 'r')
+	pqos_f = open(isolation_dir + 'pqos/' + pqos_file, 'r')
 	rd = csv.reader(pqos_f)
 	pqos_measures = dict()
 	for row in rd:
@@ -78,7 +73,7 @@ def apply_mean(all_measures):
 			#measures[event] = gmean(list(filter(lambda x: x > 0, measures[event])))
 
 def perf_to_csv(measures, name):
-	out_file = open(perf_dir + 'perf/csv_files/' + csv_dir + name + '_perf.csv', 'w')
+	out_file = open(isolation_dir + 'perf/csv_files/' + csv_dir + name + '_perf.csv', 'w')
 	writer = csv.writer(out_file)
 	events = measures.keys()
 	writer.writerow(events)
@@ -108,11 +103,11 @@ def mpki_calculation(all_measures):
 
 def attach_pqos(all_measures):
 	run_periods = time_cleanup('pqos')
-	pqos_files = os.listdir(perf_dir + 'pqos/')
+	pqos_files = os.listdir(isolation_dir + 'pqos/')
 	for pqos_file in list(filter(lambda x: x.endswith('csv'), pqos_files)):
 		if pqos_file.split('.')[1] in excluded_benchmarks: continue
 		bs = ae = alll = 0
-		pqos_f = open(perf_dir + 'pqos/' + pqos_file, 'r')
+		pqos_f = open(isolation_dir + 'pqos/' + pqos_file, 'r')
 		rd = csv.reader(pqos_f)
 		pqos_measures = dict()
 		for row in rd:
@@ -134,14 +129,14 @@ def attach_pqos(all_measures):
 ############################################# Main ################################################
 
 def write_perf_measures(all_measures):
-	out_file = open(perf_dir + 'perf/accumulated/perf_measures.csv', 'w')
+	out_file = open(isolation_dir + 'perf/accumulated/perf_measures.csv', 'w')
 	writer = csv.writer(out_file)
 	for bench in all_measures:
 		writer.writerow(all_measures[bench])
 	out_file.close()
 
 def read_perf_measures():
-	in_file = open(perf_dir + 'perf/accumulated/perf_measures.csv', 'r')
+	in_file = open(isolation_dir + 'perf/accumulated/perf_measures.csv', 'r')
 	reader = csv.reader(in_file)
 	measures = dict()
 	for row in reader:
@@ -155,7 +150,7 @@ def perf_files(tool = 'pqos'):
 	version = ''
 	if len(tool.split('-')) == 2:
 		(tool, version) = tool.split('-')
-	directory = perf_dir + tool + ('-' + version if version != '' else '') + '/'
+	directory = isolation_dir + tool + ('-' + version if version != '' else '') + '/'
 	files = filter(lambda x: x.endswith('csv'), os.listdir(directory))
 	all_measures = dict()
 	if tool == 'pqos':
@@ -197,7 +192,7 @@ def perf_files(tool = 'pqos'):
 	return all_measures
 
 def time_cleanup(tool = 'perf'):
-	directory = perf_dir + tool + '/outputs/'
+	directory = isolation_dir + tool + '/outputs/'
 	total_measures = parse_files(directory)
 	run_periods = dict()
 	for f in total_measures:

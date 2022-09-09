@@ -1,8 +1,4 @@
 import socket, json, threading, sys, time, logging, traceback
-import benchmarks
-
-sys.path.append('/home/ypap/actimanager/actidb/')
-from acticloudDB import ActiCloudDBClient
 
 HOST_DEFAULT = ""
 PORT_DEFAULT = 8080
@@ -14,7 +10,6 @@ class VmMessagesMonitor():
 		self.monitor_thread_done = 0
 
 		self._setup_logger()
-		self.actidb_client = ActiCloudDBClient()
 
 	def _setup_logger(self):
 		self.logger = logging.getLogger(__name__)
@@ -44,25 +39,6 @@ class VmMessagesMonitor():
 							vm_uuid = json_data["vm_uuid"]
 							time = json_data["time"]
 							output = json_data["output"]
-							#(performance, unit) = benchmarks.bench_get_perf_from_output(bench_name, 1,
-							#                                                    output)
-							#self.actidb_client.insert_heartbeat(vm_uuid, time, performance,
-							#                                    bench_name, nr_vcpus)
-						elif event == "acticloud-external-openstack-filter-profit-report":
-							hostname = json_data["hostname"]
-							time = json_data["time"]
-							new_vm_uuid = json_data["new-vm-uuid"]
-							profit_before = json_data["profit-before"]
-							profit_after  = json_data["profit-after"]
-							profit_diff   = json_data["profit-diff"]
-							self.actidb_client.insert_external_profit_report(hostname, time,
-							        new_vm_uuid, profit_before, profit_after, profit_diff)
-						elif event == "internal-profit-report":
-							hostname = json_data["hostname"]
-							time = json_data["time"]
-							profit = json_data["profit-value"]
-							self.actidb_client.insert_internal_profit_report(hostname, time,
-							                                                 profit)
 				except:
 					print(traceback.format_exc())
 					self.logger.error("Something went wrong when reading data from the socket.")

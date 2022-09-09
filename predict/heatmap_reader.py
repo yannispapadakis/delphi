@@ -1,23 +1,16 @@
 #!/usr/bin/python3
-import sys
-sys.path.append('../core/')
-from read_vm_output import *
 from isolation_reader import *
-
-csv_dir = home_dir + 'results/'
-grid_dir = csv_dir + 'heatmaps/'
-
-vcpus = ['1', '2', '4', '8']
 
 def generate_grid(benchmarks = []):
 	grid = OrderedDict()
-	if benchmarks == []: benchmarks = os.listdir(pairs_dir)
+	if benchmarks == []: benchmarks = os.listdir(coexecutions_dir)
 	for b in benchmarks:
-		if '-' in b:
+		if '-' in b.replace('img-dnn', 'imgdnn'):
 			grid[b] = OrderedDict()
 		else:
 			for v in vcpus:
 				bench = b + '-' + v
+				if bench in excluded_benchmarks: continue
 				grid[bench] = OrderedDict()
 	return grid
 
@@ -43,11 +36,12 @@ def read_grid(grid, name = 'grid', include = []):
 				if float(sd) > 0:
 					grid[bench1][bench2] = float(sd)
 				else:
-					(b1, v1) = bench1.split('-')
-					(b2, v2) = bench2.split('-')
+					(b1, v1) = bench1.replace('img-dnn', 'imgdnn').split('-')
+					(b2, v2) = bench2.replace('img-dnn', 'imgdnn').split('-')
+					(b1, b2) = (b1.replace('imgdnn', 'img-dnn'), b2.replace('imgdnn', 'img-dnn'))
 					if int(v1) + int(v2) > 10 or int(v1) > int(v2):
 						continue
-					search_dir = pairs_dir + b1 + '/' + v1 + 'vs' + v2 + '/'
+					search_dir = coexecutions_dir + b1 + '/' + v1 + 'vs' + v2 + '/'
 					try:
 						files = os.listdir(search_dir)
 					except:
@@ -62,7 +56,7 @@ def read_grid(grid, name = 'grid', include = []):
 		benches = run.split('.')[0].split('-')
 		(b1, v1) = benches[0].split('_')
 		(b2, v2) = benches[1].split('_')
-		dirs.append(pairs_dir + b1 + '/' + v1 + 'vs' + v2 + '/')
+		dirs.append(coexecutions_dir + b1 + '/' + v1 + 'vs' + v2 + '/')
 	if dirs != []:
 		fill_missing(grid, dirs)
 	return True
@@ -73,7 +67,9 @@ def fill_missing(grid, dirs):
 		for f in total_measures:
 			measures = total_measures[f]
 			(name_0, name_1) = (measures['vms_names'][0], measures['vms_names'][1])
-			name_0 = name_0.split('-')[3] if 'parsec' in name_0 else name_0.split('-')[3].split('.')[1]
+			name_0 = name_0.replace('img-dnn', 'imgdnn')
+			name_0 = name_0.split('-')[3] if 'parsec' in name_0 else name_0.split('-')[2 + int('spec' in name_0)].split('.')[1]
+			name_0 = name_0.replace('imgdnn', 'img-dnn')
 			name_1 = name_1.split('-')[3] if 'parsec' in name_1 else name_1.split('-')[3].split('.')[1]
 			(vcpus_0, vcpus_1) = (str(measures['vms_vcpus'][0]), str(measures['vms_vcpus'][1]))
 			bench1 = name_0 + '-' + vcpus_0
@@ -83,9 +79,9 @@ def fill_missing(grid, dirs):
 
 def calculate_grid(grid):
 	dirs = []
-	benchmarks = [x.split('-')[0] for x in grid.keys()]
+	benchmarks = [x.replace('img-dnn','imgdnn').split('-')[0].replace('imgdnn', 'img-dnn') for x in grid.keys()]
 	for bench in benchmarks:
-		bench_dir = pairs_dir + bench + '/'
+		bench_dir = coexecutions_dir + bench + '/'
 		combinations = os.listdir(bench_dir)
 		for combination in combinations:
 			dd = bench_dir + combination + '/'

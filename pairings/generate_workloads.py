@@ -1,10 +1,9 @@
 #!/usr/bin/python
-import sys, csv, pprint, random, os
+import sys
 sys.path.append('../core/')
 from read_vm_output import *
 
-predictions_dir = home_dir + 'results/predictions/SVC/'
-workload_dir = home_dir + 'pairings/workload_pairs/'
+predictions_dir = results_dir + 'predictions/SVC/'
 
 def pred_file(mode, qos, classes):
 	return predictions_dir + mode + '_' + str(classes) + '_' + str(qos) + '_SVC.csv'

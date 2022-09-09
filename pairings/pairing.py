@@ -1,14 +1,10 @@
 #!/usr/bin/python3
-import random, sys, csv, subprocess
-import numpy as np
-from operator import itemgetter
-from attackers_read import attacker_classifier
 sys.path.append('../predict/')
 from heatmap_reader import *
+#from attackers_read import attacker_classifier
 
 from matching.algorithms import stable_roommates
 from matching import Player
-import pprint
 
 clos = 1.1
 report = ''

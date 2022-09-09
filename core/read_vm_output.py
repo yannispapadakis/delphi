@@ -1,13 +1,4 @@
-import sys, os, json, datetime, random, time, re, csv
-import numpy as np
-from collections import OrderedDict
-
-home_dir = '/'.join(os.getcwd().split('/')[:4]) + '/'
-pairs_dir = home_dir + 'results/coexecutions/'
-perf_dir = home_dir + 'results/isolation_runs/'
 from benchmarks import *
-p95 = True
-excluded_benchmarks = ['shore-1', 'masstree-1', 'masstree-4']
 
 def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold_vms, \
 			  vms_names, vms_vcpus, vm_times_completed, vm_uuid, vm_times_str):
@@ -151,7 +142,7 @@ def mean_perf_calc(vm_perfs, vm_names, vm_event_times, \
 			continue
 		if vm_perfs[vm] == []:
 			print("List of perfs is empty for vm_seq_num:", vm)
-			print(vm_names[0], vm_names[1])
+			print(vm_names[0], vms_vcpus[0], vm_names[1], vms_vcpus[1])
 			continue
 		vcpus = vms_vcpus[vm]
 		duration = time_axis[-1] - time_axis[0]
@@ -180,7 +171,7 @@ def mean_perf_calc(vm_perfs, vm_names, vm_event_times, \
 				weighted_perfs.append((t1 - t0) * vm_perfs[vm][prev_idx])
 			vm_mean_perf[vm] = sum(weighted_perfs) / duration
 
-def parse_files(ld = pairs_dir, endswith = '.txt'):
+def parse_files(ld = coexecutions_dir, endswith = '.txt'):
 	files = [f for f in os.listdir(ld) if f.endswith(endswith)]
 	if files == []:
 		print("No files found with given pattern in dir: ", ld)

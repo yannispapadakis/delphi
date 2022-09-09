@@ -1,8 +1,6 @@
 #!/usr/bin/python3
 from pairing import *
 
-matrix_dir = home_dir + 'results/'
-
 def get_predictions_mult(benchmarks):
 	predictions = dict()
 	classes = 2
@@ -36,7 +34,7 @@ def exhaustive_matrix(preds):
 			preds[row]['heatmap'][col] = ((preds[row]['sens'], preds[col]['cont'][preds[row]['slo']]), deny)
 
 def print_matrix(preds, workload):
-	out_file = matrix_dir + workload + '_matrix.csv'
+	out_file = results_dir + workload + '_matrix.csv'
 	fd = open(out_file, mode='w')
 	writer = csv.writer(fd, delimiter='\t')
 	benchmarks = list(preds.keys())
