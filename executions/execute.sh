@@ -69,11 +69,11 @@ if [ $# -lt 3 ]; then
 	echo "| COEXECUTION | ./execute.sh <benchmarks1> <vcpus1> <benchmarks2> <vcpus2> |"
 fi
 
-#replace_nova_conf "gno"
+replace_nova_conf "gno"
 source /root/admin_openrc
 
-#python /home/ypap/actimanager/actimanager/Internal.py acticloud1 pps &> ../results/internal.txt &
-#internal_pid="$!"
+python /home/ypap/actimanager/actimanager/Internal.py acticloud1 pps &> ../results/internal.txt &
+internal_pid="$!"
 
 benchmarks $1
 vcpus=$2
@@ -86,4 +86,4 @@ elif [ $# -eq 4 ]; then
 	run_coexecution $benches1 $vcpus $benches $vcpus2
 fi
 
-#kill -15 $internal_pid
+kill -15 $internal_pid
