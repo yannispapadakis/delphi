@@ -1,6 +1,6 @@
 from sklearn.ensemble import RandomForestRegressor 
 import pandas as pd
-from heatmap_reader import *
+from heatmap import *
 
 def pair_perf(measures):
 	pair_measures = []

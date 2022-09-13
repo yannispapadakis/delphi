@@ -76,7 +76,7 @@ def select_model(model, feature, cl, qos):
 import csv
 import pandas as pd
 from sklearn import preprocessing
-from heatmap_reader import results_dir
+from heatmap import *
 
 def csv_writer(measures, classes, benches, mode):
 	out_file = results_dir + mode + '.csv'

@@ -44,6 +44,7 @@ run_coexecution()
 			output_file="${bench1}_${vcpus1}-${bench2}_${vcpus2}.txt"
 			./heatmap_run.py $bench1 $vcpus $bench2 $vcpus2 &> ../results/${output_file}
 		done
+		./cleaner.py ${bench1}
 	done
 	openstack server stop vm1-${vcpus1} vm2-${vcpus2}_core
 }

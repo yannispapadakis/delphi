@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 sys.path.append('../predict/')
-from heatmap_reader import *
+from heatmap import *
 #from attackers_read import attacker_classifier
 
 from matching.algorithms import stable_roommates

@@ -5,7 +5,8 @@ def clean(filename):
 	fp = open(filename)
 	fw = open("output.txt", mode='w')
 	line = fp.readline()
-	failed = total = 0
+	tail_failed = tail_total = 0
+	parsec_failed = 0
 	while line:
 		tokens = line.split(' - ')
 		try:
@@ -21,19 +22,28 @@ def clean(filename):
 			if not event_data.startswith("{"):
 				line = fp.readline()
 				continue
+			if '"output": ""' in event_data:
+				parsec_failed += 1
 			if "tailbench" in event_data:
-				total += 1
+				tail_total += 1
 				if "lats.bin_error" in event_data:
-					failed += 1
+					tail_failed += 1
 					line = fp.readline()
 					continue
 		fw.write(line)
 		line = fp.readline()
 	fp.close()
 	fw.close()
-	if total > 0 and failed == total:
+	if tail_total > 0 and tail_failed == tail_total:
 		print "All executions failed in: " + filename
+	if parsec_failed > 0:
+		print "At least one execution returned empty output in: " + filename
 	os.rename('output.txt', filename)
+
+def files_at_results(benchmarks):
+	for bench in benchmarks:
+		files = subprocess.check_output('ls /home/ypap/delphi/results/' + bench + '*-*txt', shell = True)
+		for f in list(filter(lambda x: x != '', files.split('\n'))): clean(f)
 
 def parse_all_files(folders):
 	coexecutions_dir = '/home/ypap/delphi/results/coexecutions/'
@@ -54,4 +64,5 @@ def parse_all_files(folders):
 		print bench, "cleaned"
 			
 if __name__ == "__main__":
-	parse_all_files(sys.argv[1:])
+	files_at_results(sys.argv[1:])
+#	parse_all_files(sys.argv[1:])
