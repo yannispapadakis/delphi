@@ -33,20 +33,22 @@ run_coexecution()
 	benchmarks2=$3
 	vcpus2=$4
 
-	openstack server start vm1-${vcpus1} vm2-${vcpus2}_core
+	openstack server start vm1-${vcpus1} vm2-${vcpus2}
 	sleep 30
 
 	IFS=',' read -r -a benches1 <<< "$benchmarks1"
-	for bench1 in ${benches1[@]}; do
+	for i in ${!benches1[@]}; do
 		IFS=',' read -r -a benches2 <<< "$benchmarks2"
-		for bench2 in ${benches2[@]}; do
-			echo $(date +"%F %T") ":" $bench1 "(" $vcpus1 ")" "vs" $bench2 "(" $vcpus2 ")"
-			output_file="${bench1}_${vcpus1}-${bench2}_${vcpus2}.txt"
-			./heatmap_run.py $bench1 $vcpus $bench2 $vcpus2 &> ../results/${output_file}
+		for j in ${!benches2[@]}; do
+			#if [ $j -ge $i ]; then
+			echo $(date +"%F %T") ":" "${benches1[$i]}" "(" $vcpus1 ")" "vs" "${benches2[$j]}" "(" $vcpus2 ")"
+			output_file="${benches1[$i]}_${vcpus1}-${benches2[$j]}_${vcpus2}.txt"
+			./heatmap_run.py ${benches1[$i]} $vcpus ${benches2[$j]} $vcpus2 &> ../results/${output_file}
+			#fi
 		done
-		./cleaner.py ${bench1}
+		./cleaner.py ${benches1[$i]}
 	done
-	openstack server stop vm1-${vcpus1} vm2-${vcpus2}_core
+	openstack server stop vm1-${vcpus1} vm2-${vcpus2}
 }
 
 specs="astar,bzip2,bwaves,cactusADM,calculix,dealII,gamess,gcc,GemsFDTD,gobmk,gromacs,h264ref,hmmer,lbm,leslie3d,libquantum,mcf,milc,namd,omnetpp,perlbench,povray,sjeng,soplex,sphinx3,tonto,xalancbmk,zeusmp"

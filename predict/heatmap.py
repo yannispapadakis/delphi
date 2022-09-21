@@ -7,49 +7,29 @@ def spawn_heatmap(benchmarks = []):
 	benchmarks = list(filter(lambda x: x not in excluded_benchmarks, benchmarks))
 	return OrderedDict((b, OrderedDict()) for b in benchmarks)
 
-def read_heatmap(heatmap, name = 'heatmap', include = []):
+def read_heatmap(heatmap, name = 'heatmap'):
 	hm_file = heatmap_dir + name + '.csv'
 	try:
 		fd = open(hm_file)
 	except:
-		return False
+		write_heatmap()
+		fd = open(hm_file)
 	hm_read = csv.reader(fd, delimiter='\t')
 	new_files = []
 	for row in hm_read:
 		if row[0] == '':
 			benchmarks = row
-			if include == []: include = benchmarks
 		else:
 			bench1 = row[0]
-			if bench1 not in include: continue
+			if bench1 not in heatmap.keys(): continue
 			for (i, sd) in enumerate(row):
 				if i == 0: continue
 				bench2 = benchmarks[i]
-				if bench2 not in include: continue
+				if bench2 not in heatmap.keys(): continue
 				if float(sd) > 0:
 					heatmap[bench1][bench2] = float(sd)
-				else:
-					(b1, v1) = bench1.replace('img-dnn', 'imgdnn').split('-')
-					(b2, v2) = bench2.replace('img-dnn', 'imgdnn').split('-')
-					(b1, b2) = (b1.replace('imgdnn', 'img-dnn'), b2.replace('imgdnn', 'img-dnn'))
-					if int(v1) + int(v2) > 10: continue
-					search_dir = coexecutions_dir + b1 + '/' + v1 + 'vs' + v2 + '/'
-					try: files = os.listdir(search_dir)
-					except: continue
-					fname = b1 + '_' + v1 + '-' + b2 + '_' + v2 + '.txt'
-					if fname in files or fname.replace('-','.') in files:
-						new_files.append(fname)
 	fd.close()
-
-	dirs = []
-	for run in new_files:
-		benches = run.split('.')[0].split('-')
-		(b1, v1) = benches[0].split('_')
-		(b2, v2) = benches[1].split('_')
-		dirs.append(coexecutions_dir + b1 + '/' + v1 + 'vs' + v2 + '/')
-	if dirs != []:
-		fill_missing(heatmap, dirs)
-	return True
+	clean_heatmap(heatmap)
 
 def fill_missing(heatmap, dirs):
 	for directory in dirs:
@@ -64,6 +44,7 @@ def fill_missing(heatmap, dirs):
 			(vcpus_0, vcpus_1) = (str(measures['vms_vcpus'][0]), str(measures['vms_vcpus'][1]))
 			bench1 = name_0 + '-' + vcpus_0
 			bench2 = name_1 + '-' + vcpus_1
+			if bench1 not in heatmap.keys() or bench2 not in heatmap.keys(): continue
 			heatmap[bench1][bench2] = measures['vm_mean_perf'][0]
 			heatmap[bench2][bench1] = measures['vm_mean_perf'][1]
 
@@ -78,10 +59,11 @@ def calculate_heatmap(heatmap):
 			if len(os.listdir(dd)) == 0: continue
 			if dd not in dirs: dirs.append(dd)
 	fill_missing(heatmap, dirs)
+	clean_heatmap(heatmap)
 
-def transpose_heatmap(heatmap, include = []):
+def transpose_heatmap(heatmap):
 	keys = heatmap.keys()
-	heatmapT = spawn_heatmap(include)
+	heatmapT = spawn_heatmap(keys)
 	for col in keys:
 		for row in keys:
 			try:
@@ -105,8 +87,8 @@ def classes(heatmap, qos, class_num = 2):
 		quartiles3[bench] = q3
 	return (clos, whiskers, quartiles3)
 
-def print_heatmap(heatmap, T = False, name = 'heatmap'):
-	out_file = heatmap_dir + name + "T.csv" if T else heatmap_dir + name + ".csv"
+def print_heatmap(heatmap, T = '', name = 'heatmap'):
+	out_file = heatmap_dir + name + T + ".csv"
 	fd = open(out_file, mode='w')
 	writer = csv.writer(fd, delimiter='\t')
 
@@ -120,22 +102,20 @@ def print_heatmap(heatmap, T = False, name = 'heatmap'):
 	fd.close()
 
 def clean_heatmap(heatmap):
-	removed = []
-	for bench in heatmap:
-		if not heatmap[bench]: removed.append(bench)
-	for bench in removed: del heatmap[bench]
+	for b in list(filter(lambda x: heatmap[x] == {}, list(heatmap.keys()))): del heatmap[b]
 
 def get_heatmap(benchmarks, feature = 'sens', qos = 1.2, class_num = 3):
 	heatmap = spawn_heatmap(benchmarks)
-	ok = read_heatmap(heatmap, include = benchmarks)
-	if not ok:
-		calculate_heatmap(heatmap)
+	read_heatmap(heatmap)
 	if feature == 'cont':
-		heatmap = transpose_heatmap(heatmap, benchmarks)
-	if not ok:
-		clean_heatmap(heatmap)
-		print_heatmap(heatmap, feature == 'cont')
+		heatmap = transpose_heatmap(heatmap)
 	return classes(heatmap, qos, class_num)
 
+def write_heatmap():
+	heatmap = spawn_heatmap([])
+	calculate_heatmap(heatmap)
+	print_heatmap(heatmap)
+	print_heatmap(transpose_heatmap(heatmap), 'T')
+
 if __name__ == '__main__':
-	get_heatmap([])
+	write_heatmap()

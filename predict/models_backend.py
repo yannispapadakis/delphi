@@ -14,7 +14,7 @@ qos_levels = [1 + 0.1 * x for x in range(1, 4)]
 models = ['LR', 'SGD', 'PA', 'PER', 'RID', \
 		  'LDA', 'QDA', 'SVC', 'NSVC', 'LSVC', \
 		  'DT', 'KN', 'RN', 'NC', 'GP', 'GNB', \
-		  'RF', 'BAG', 'ET', 'AB', 'HGB', 'GB', 'MLP']
+		  'RF', 'ET', 'AB', 'HGB', 'GB', 'MLP']
 
 def model_library(model_str, gp):
 	if model_str == "LR":   return LogisticRegression(penalty = gp[0], tol = gp[1], C = gp[2], solver = gp[3], l1_ratio = gp[4], max_iter = gp[5])
@@ -78,8 +78,10 @@ import pandas as pd
 from sklearn import preprocessing
 from heatmap import *
 
-def csv_writer(measures, classes, benches, mode):
-	out_file = results_dir + mode + '.csv'
+temp_dir = '/home/ypap/temp/'
+
+def pred_set_writer(measures, classes, benches, mode):
+	out_file = temp_dir + mode + '.csv'
 	fd = open(out_file, mode='w')
 	writer = csv.writer(fd, delimiter=',')
 	writer.writerow(measures['Title'])
@@ -115,8 +117,8 @@ def get_data_name(feature, cl, mod, qos):
 	return feature + str(cl) + modd + str(qos)
 
 def run_model(answers, feature, cl, qos, mod):
-	train_data = pd.read_csv(results_dir + get_data_name(feature, cl, mod, qos) + 'train.csv')
-	test_data = pd.read_csv(results_dir + get_data_name(feature, cl, mod, qos) + 'test.csv')
+	train_data = pd.read_csv(temp_dir + get_data_name(feature, cl, mod, qos) + 'train.csv')
+	test_data = pd.read_csv(temp_dir + get_data_name(feature, cl, mod, qos) + 'test.csv')
 
 	if feature == 'cont': remove_cols = [0, 2, 3, 4, 5, 6, 8, 15]
 	if feature == 'sens': remove_cols = [0, 8, 13, 15]
@@ -148,18 +150,26 @@ def run_model(answers, feature, cl, qos, mod):
 		answers[test_names[i]] = (test_pred[i], y_test[i])
 	return acc_score
 
+def get_train_test(train, test = ''):
+	train = [x for sublist in list(map(lambda x: benchmark_suites[x], train.split(','))) for x in sublist]
+	if test != '':
+		return (train, [x for sublist in list(map(lambda x: benchmark_suites[x], test.split(','))) for x in sublist])
+	return train
+
 def help_message(ex):
-	print("Usage:    %s <function> <feature> <qos> <classes> <model>\n" % ex + \
-		  "Function: " + ' | '.join(['test', 'cv']) + '\n' + \
-		  "Feature:  " + ' | '.join(['sens', 'cont']) + '\n' + \
-		  "QoS:      " + ' | '.join(map(str, qos_levels)) + "\n" + \
-		  "Classes:  " + ' | '.join(map(str, [2, 3])) + '\n' + \
-		  "Model:    " + ' | '.join(models))
+	print("Usage    : %s <function> <feature> <qos> <classes> <model> <train> <test>\n" % ex + \
+		  "Function : " + ' | '.join(['test', 'cv']) + '\n' + \
+		  "Feature  : " + ' | '.join(['sens', 'cont']) + '\n' + \
+		  "QoS      : " + ' | '.join(map(str, qos_levels)) + "\n" + \
+		  "Classes  : " + ' | '.join(map(str, [2, 3])) + '\n' + \
+		  "Model    : " + ' | '.join(models) + '\n' + \
+		  "Train    : " + ' | '.join(benchmark_suites.keys()) + '\n' + \
+		  "Test     : " + ' | '.join(benchmark_suites.keys()))
 	return 0
 
 def arg_check(args):
-	if len(args) < 6: sys.exit(help_message(args[0]))
-	(func, feature, qos, class_num, model) = args[1:]
+	if len(args) < 7: sys.exit(help_message(args[0]))
+	(func, feature, qos, class_num, model) = args[1:6]
 	qos = float(qos)
 	class_num = int(class_num)
 	if func not in ['cv', 'test'] or \

@@ -13,6 +13,8 @@ results_dir = home_dir + 'results/'
 coexecutions_dir = results_dir + 'coexecutions/'
 isolation_dir = results_dir + 'isolation_runs/'
 heatmap_dir = results_dir + 'heatmaps/'
+predictions_dir = results_dir + 'predictions/'
+gridsearch_dir = results_dir + 'GridSearch/'
 workload_dir = home_dir + 'pairings/workload_pairs/'
 
 vcpus = ['1', '2', '4', '8']
@@ -80,6 +82,12 @@ benches_vcpus = {
 							 "p95": {1: 1534.068, 2: 1570.260, 4: 1527.874, 8: 1530.911},
 							 "p99": {1: 2071.398, 2: 2161.745, 4: 2387.787, 8: 1958.239}}
 }
+
+specs = [x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 'spec' in x, benches_vcpus.keys())) for y in vcpus]
+parsecs = [x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 'parsec' in x, benches_vcpus.keys())) for y in vcpus]
+tails = list(filter(lambda x: x not in excluded_benchmarks,
+			[x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 'tailbench' in x, benches_vcpus.keys())) for y in vcpus]))
+benchmark_suites = {'s': specs, 'p': parsecs, 't': tails}
 
 ##################### Execution configs ##################### 
 ## Setup the logging facility
