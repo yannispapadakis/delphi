@@ -100,7 +100,13 @@ def kill_perf(tool, tool_pid):
 		os.kill(tool_pid, 15)
 		logger.info("======> %s stopped (PID: %d)", tool, tool_pid)
 	except:
-		logger.info("Did not kill local %s, already finished" % tool)
+		try:
+			grep = subprocess.check_output('ps -ef | grep "perf kvm"', shell=True)
+			pid = int(filter(lambda x: 'perf kvm --guest' in x, grep.split('\n'))[0].split()[1])
+			os.kill(pid, 15)
+			logger.info("======> %s stopped -via grep- (PID: %d)", tool, pid)
+		except:
+			logger.info("Did not kill local %s, already finished" % tool)
 
 def isolation_run(bench, port, tool):
 	host = 'vm1-' + str(bench[2])

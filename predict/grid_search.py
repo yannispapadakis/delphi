@@ -6,9 +6,7 @@ def writer(config, answers, max_acc, fd):
 	config = list(map(str, config))
 	config = ''.join([it for sublist in zip(config, ['\t' for i in range(len(config))]) for it in sublist])
 	fd.write(config + '\n')
-	if acc > max_acc[0]:
-		print(' ' * 150, sep='', end= '\r', flush = True)
-		print(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '\t' + config, sep='', end="\r", flush=True)
+	print(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '\t' + config)
 	return (acc, config, answers) if acc > max_acc[0] else max_acc
 
 def lr_grid(feature, class_num, qos, train, fd):

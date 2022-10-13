@@ -15,7 +15,7 @@ run_isolation()
 	tool=$3
 
 	openstack server start vm1-${vcpus}
-	sleep 30
+	sleep 60
 
 	IFS=',' read -r -a benches <<< "$benchmarks"
 	for vm in ${benches[@]}; do
@@ -34,12 +34,15 @@ run_coexecution()
 	vcpus2=$4
 
 	openstack server start vm1-${vcpus1} vm2-${vcpus2}
-	sleep 30
+	sleep 60
 
 	IFS=',' read -r -a benches1 <<< "$benchmarks1"
 	for i in ${!benches1[@]}; do
 		IFS=',' read -r -a benches2 <<< "$benchmarks2"
 		for j in ${!benches2[@]}; do
+			#if [[ ("${benches1[$i]}" == "shore" && "$vcpus1" == "1") || ("${benches1[$i]}" == "masstree" && "$vcpus1" == "8") ]]; then
+			#	continue
+			#fi
 			#if [ $j -ge $i ]; then
 			echo $(date +"%F %T") ":" "${benches1[$i]}" "(" $vcpus1 ")" "vs" "${benches2[$j]}" "(" $vcpus2 ")"
 			output_file="${benches1[$i]}_${vcpus1}-${benches2[$j]}_${vcpus2}.txt"
@@ -48,6 +51,7 @@ run_coexecution()
 		done
 		./cleaner.py ${benches1[$i]}
 	done
+	rm ../results/internal.txt
 	openstack server stop vm1-${vcpus1} vm2-${vcpus2}
 }
 

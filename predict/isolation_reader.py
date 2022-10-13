@@ -103,11 +103,11 @@ def mpki_calculation(all_measures):
 
 def attach_pqos(all_measures):
 	run_periods = time_cleanup('pqos')
-	pqos_files = os.listdir(isolation_dir + 'pqos/')
+	pqos_files = os.listdir(isolation_dir + 'pqos/raw_measures/')
 	for pqos_file in list(filter(lambda x: x.endswith('csv'), pqos_files)):
 		if pqos_file.split('.')[1] in excluded_benchmarks: continue
 		bs = ae = alll = 0
-		pqos_f = open(isolation_dir + 'pqos/' + pqos_file, 'r')
+		pqos_f = open(isolation_dir + 'pqos/raw_measures/' + pqos_file, 'r')
 		rd = csv.reader(pqos_f)
 		pqos_measures = dict()
 		for row in rd:
@@ -150,7 +150,7 @@ def perf_files(tool = 'pqos'):
 	version = ''
 	if len(tool.split('-')) == 2:
 		(tool, version) = tool.split('-')
-	directory = isolation_dir + tool + ('-' + version if version != '' else '') + '/'
+	directory = isolation_dir + tool + ('-' + version if version != '' else '') + '/raw_measures/'
 	files = filter(lambda x: x.endswith('csv'), os.listdir(directory))
 	all_measures = dict()
 	if tool == 'pqos':

@@ -41,8 +41,7 @@ def model_library(model_str, gp):
 	if model_str == "GB":   return GradientBoostingClassifier(loss = gp[0], n_estimators = gp[1], criterion = gp[2], min_samples_split = gp[3], min_samples_leaf = gp[4], max_features = gp[5])
 	if model_str == "MLP":  return MLPClassifier(activation = gp[0], solver = gp[1], alpha = gp[2], learning_rate = gp[3], max_iter = gp[4])
 
-def select_model(model, feature, cl, qos):
-	run = 'spec/'
+def select_model(model, feature, cl, qos, run):
 	grid_fd = open(results_dir + "GridSearch/" + run + '_'.join([feature, str(cl), str(qos)]) + '.txt', 'r')
 	line = grid_fd.readline()
 	while line:
@@ -80,16 +79,17 @@ from heatmap import *
 
 temp_dir = '/home/ypap/temp/'
 
-def pred_set_writer(measures, classes, benches, mode):
-	out_file = temp_dir + mode + '.csv'
-	fd = open(out_file, mode='w')
-	writer = csv.writer(fd, delimiter=',')
-	writer.writerow(measures['Title'])
-	for bench in benches:
-		if bench in measures and bench in classes:
-			outrow = measures[bench] + [classes[bench]]
-			writer.writerow(outrow)
-	fd.close()
+def pred_set_writer(measures, sets, data_name):
+	def write_set(measures, classes, benches, name):
+		fd = open(temp_dir + name + '.csv', mode='w')
+		writer = csv.writer(fd, delimiter=',')
+		writer.writerow(measures['Title'])
+		for bench in benches:
+			if bench in measures and bench in classes:
+				writer.writerow(measures[bench] + [classes[bench]])
+		fd.close()
+	for (i, (pred_set, pred_class)) in enumerate(sets):
+		write_set(measures, pred_class, pred_set, data_name + str(i))
 
 def print_pred(answers, outfile, acc):
 	fd = open(outfile,'w')
@@ -107,18 +107,15 @@ def print_pred(answers, outfile, acc):
 	writer.writerow(last_row)
 	fd.close()
 
-def get_data_name(feature, cl, mod, qos):
+def get_data_name(feature, cl, mod, qos, func):
 	if type(mod) == str:
-		return feature + str(cl) + mod + str(qos)
+		return feature + str(cl) + mod + str(qos) + func
 	modd = str(type(mod)).split('.')[-1].split("'")[0]
-	if modd == 'DecisionTreeClassifier': modd = 'DT'
-	if modd == 'KNeighbors': modd = 'KN'
-	if modd == 'RandomForest': modd = 'RF'
-	return feature + str(cl) + modd + str(qos)
+	return feature + str(cl) + modd + str(qos) + func
 
-def run_model(answers, feature, cl, qos, mod):
-	train_data = pd.read_csv(temp_dir + get_data_name(feature, cl, mod, qos) + 'train.csv')
-	test_data = pd.read_csv(temp_dir + get_data_name(feature, cl, mod, qos) + 'test.csv')
+def run_model(answers, feature, cl, qos, model, func):
+	train_data = pd.read_csv(temp_dir + get_data_name(feature, cl, model, qos, func) + '0.csv')
+	test_data = pd.read_csv(temp_dir + get_data_name(feature, cl, model, qos, func) + '1.csv')
 
 	if feature == 'cont': remove_cols = [0, 2, 3, 4, 5, 6, 8, 15]
 	if feature == 'sens': remove_cols = [0, 8, 13, 15]
@@ -131,10 +128,6 @@ def run_model(answers, feature, cl, qos, mod):
 	test_names = test_data['Benchmark']
 	y_train = train_data['Class']
 	y_test = test_data['Class']
-
-	if type(mod) == str:
-		model = select_model(mod, feature, cl, qos)
-	else: model = mod
 
 	train_scaled = scaler.transform(train)
 	test_scaled = scaler.transform(test)
@@ -169,12 +162,14 @@ def help_message(ex):
 
 def arg_check(args):
 	if len(args) < 7: sys.exit(help_message(args[0]))
-	(func, feature, qos, class_num, model) = args[1:6]
+	(func, feature, qos, class_num, model, train) = args[1:7]
 	qos = float(qos)
 	class_num = int(class_num)
 	if func not in ['cv', 'test'] or \
 	   feature not in ['sens', 'cont'] or \
 	   qos not in qos_levels or \
 	   class_num not in [2, 3] or \
-	   model not in models:
+	   model not in models or \
+	   (func == 'test' and len(args) < 8):
 	   sys.exit(help_message(args[0]))
+	return [func, feature, qos, class_num, model] + args[6:]

@@ -1,11 +1,14 @@
 #!/usr/bin/python
-import datetime,sys,os,subprocess
+import datetime,sys,os,subprocess, json
 
 def clean(filename):
 	fp = open(filename)
 	fw = open("output.txt", mode='w')
 	line = fp.readline()
-	ssh_fail = tail_failed = tail_total = parsec_failed = disk_failed = 0
+	(ssh_fail, tail_failed, tail_total, parsec_failed, disk_failed) = (0, 0, 0, 0, 0)
+	tail_exists = False
+	(hb_expected, hb_completed, bench_expected) = (dict(), dict(), dict())
+	report = []
 	while line:
 		tokens = line.split(' - ')
 		try:
@@ -16,6 +19,10 @@ def clean(filename):
 		if tokens[2].startswith("Something"):
 			line = fp.readline()
 			continue
+		if "Spawned new VM" in line:
+			hb_expected[int(tokens[2].split()[5])] = int(tokens[2].split()[-1].split('-')[-2].split('_')[0])
+			bench_expected[int(tokens[2].split()[5])] = tokens[2].split()[-1].split('-')[-3].split('.')[-1]
+			tail_exists = "tailbench" in line or tail_exists
 		if "ssh processes" in line:
 			ssh_fail += 1
 		if "EVENT" in line:
@@ -29,26 +36,41 @@ def clean(filename):
 				disk_failed += 1
 			if "tailbench" in event_data:
 				tail_total += 1
-				if "lats.bin_error" in event_data:
+				if "lats.bin_error" in event_data or "RuntimeWarning" in event_data:
 					tail_failed += 1
 					line = fp.readline()
 					continue
+			if "heartbeat" in line:
+				json_data = json.loads(event_data)
+				if bench_expected[json_data['vm_seq_num']] not in json_data["bench"]:
+					report.append(json_data["bench"] + " heartbeat found in " + filename)
+				else:
+					if json_data['vm_seq_num'] in hb_completed:
+						hb_completed[json_data['vm_seq_num']] += 1
+					else: hb_completed[json_data['vm_seq_num']] = 1
 		fw.write(line)
 		line = fp.readline()
 	fp.close()
 	fw.close()
 	os.rename('output.txt', filename)
+	for vm in hb_completed:
+		if hb_expected[vm] > hb_completed[vm]:
+			print(str(hb_completed[vm]) + '/' + str(hb_expected[vm]) + " executions of VM: " + str(vm) + ' (' + filename.split('/')[-1] + ')')
 	if '/' in filename:
 		dir_fn = filename.split('/')
 		(dir_, filename) = ('/'.join(dir_fn[:-1] + ['']), dir_fn[-1])
-	if tail_total > 0 and tail_failed == tail_total:
-		print "All executions failed in: " + filename
-	elif parsec_failed > 0:
-		print "At least one execution returned empty output in: " + filename
-	elif disk_failed > 0:
-		print "Disk had no space in: " + filename
-	elif ssh_fail > 0:
-		print "Multiple SSH processes in: " + filename
+	if tail_exists and tail_failed == tail_total:
+		report.append("All executions failed in: " + filename)
+	if parsec_failed > 0:
+		report.append("At least one execution returned empty output in: " + filename)
+	if disk_failed > 0:
+		report.append("Disk had no space in: " + filename)
+	if ssh_fail > 0:
+		report.append("Multiple SSH processes in: " + filename)
+	if report != []:
+		for r in report: print r
+		dest = '/home/ypap/delphi/results/trash/'
+		os.rename(dir_ + filename, dest + filename)
 	else:
 		fn_fix = filename.replace('img-dnn', 'imgdnn')
 		(b1, v1, b2, v2) = [y for x in list(map(lambda x: x.split('_'), fn_fix.split('.txt')[0].split('-'))) for y in x]
@@ -57,8 +79,11 @@ def clean(filename):
 		os.rename(dir_ + filename, dest + filename)
 
 def files_at_results(benchmarks):
+	res_dir = '/home/ypap/delphi/results/'
+	if benchmarks == []:
+		benchmarks = set(map(lambda x: x.split("_")[0], map(lambda x: x.split('-')[0], filter(lambda x: x.endswith('.txt') and not x.startswith('internal'), os.listdir(res_dir)))))
 	for bench in benchmarks:
-		files = subprocess.check_output('ls /home/ypap/delphi/results/' + bench + '*-*txt', shell = True)
+		files = subprocess.check_output('ls ' + res_dir + bench + '*-*txt', shell = True)
 		for f in list(filter(lambda x: x != '', files.split('\n'))): clean(f)
 
 def parse_all_files(folders):
@@ -80,5 +105,6 @@ def parse_all_files(folders):
 		print bench, "cleaned"
 			
 if __name__ == "__main__":
-	files_at_results(sys.argv[1:])
-#	parse_all_files(sys.argv[1:])
+	if sys.argv[1] == 'dir':
+		parse_all_files(sys.argv[2:])
+	else: files_at_results(sys.argv[1:])

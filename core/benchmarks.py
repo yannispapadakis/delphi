@@ -20,7 +20,7 @@ workload_dir = home_dir + 'pairings/workload_pairs/'
 vcpus = ['1', '2', '4', '8']
 
 p95 = True
-excluded_benchmarks = ['shore-1', 'masstree-1', 'masstree-4']
+excluded_benchmarks = ['shore-1', 'masstree-8']
 
 benches_vcpus = {
 	"spec-400.perlbench":	{"runtime_isolation": {1: 193.0, 2: 195.0, 4: 199.0, 8: 210.25}},
@@ -63,12 +63,12 @@ benches_vcpus = {
 	"parsec.swaptions":		{"runtime_isolation": {1: 595, 2: 300, 4: 149, 8: 74}},
 	"parsec.vips":			{"runtime_isolation": {1: 264, 2: 134, 4: 67, 8: 34}},
 	"parsec.x264":			{"runtime_isolation": {1: 107, 2: 77, 4: 29, 8: 64}},
-	"tailbench.img-dnn":	{"runtime_isolation": {1: 112, 2: 314, 4: 314, 8: 314},
-							 "p95": {1: 0.662, 2: 0.742, 4: 0.739, 8: 0.777},
-							 "p99": {1: 0.728, 2: 0.807, 4: 0.802, 8: 0.893}},
-	"tailbench.masstree":	{"runtime_isolation": {2: 287, 8: 287},
-							 "p95": {2: 0.561, 8: 0.780},
-							 "p99": {2: 0.835, 8: 0.886}},
+	"tailbench.img-dnn":	{"runtime_isolation": {1: 299, 2: 300, 4: 299, 8: 299},
+							 "p95": {1: 0.795, 2: 0.822, 4: 0.837, 8: 0.932},
+							 "p99": {1: 0.846, 2: 1.338, 4: 1.010, 8: 1.112}},
+	"tailbench.masstree":	{"runtime_isolation": {1: 296, 2: 296, 4: 296, 8: 287},
+							 "p95": {1: 0.456, 2: 0.500, 4: 0.468, 8: 0.780},
+							 "p99": {1: 0.526, 2: 0.577, 4: 0.609, 8: 0.886}},
 	"tailbench.moses":		{"runtime_isolation": {1: 305, 2: 306, 4: 306, 8: 306},
 							 "p95": {1: 2.130, 2: 2.313, 4: 2.530, 8: 2.881},
 							 "p99": {1: 2.499, 2: 2.599, 4: 2.809, 8: 3.186}},

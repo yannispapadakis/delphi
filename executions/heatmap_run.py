@@ -56,7 +56,7 @@ def get_vm_commands(seq_num, vm_chars, port, ip, fill_in = False):
 		logger.info("Spawned new VM with seq_num: %d and name: %s", seq_num, vm_name)
 		udata = vm_header % {"seq_num": seq_num, "port": port}
 		if "spec-" in bench_name:
-	#		if "calculix" in bench_name: udata += vm_calculix
+			#if "calculix" in bench_name: udata += vm_calculix
 			spec_bench = bench_name.split('-')[1]
 			udata += vm_spec % {"seq_num": seq_num, "vcpus": vcpus,
 								"times_to_run": times_to_run, "bench": spec_bench, "port": port}
@@ -79,6 +79,7 @@ def ssh_command_pid(host):
 	pid = map(lambda w: w[1], filter(lambda z: host == z[8], map(lambda y: y.split(), filter(lambda x: ('ssh ' + host) in x, ps_out.split('\n')))))
 	if len(pid) > 1:
 		logger.info(str(len(pid)) + " ssh processes on host: " + host + ": " + str(pid))
+	if len(pid) == 0: return []
 	return pid[0]
 
 def find_finished_benchmark(pids):
@@ -120,17 +121,31 @@ def kill_tailbench():
 		except: continue
 		os.system("ssh client 'kill -15 " + child_pid + "'")
 
+def verify_empty_host(host):
+	pids = ssh_command_pid(host)
+	while pids != []:
+		logger.info(str(len(pids)) + " ssh connection(s) found on host: " + host + " ...clearing...")
+		kill_spec(host)
+		kill_parsec(host)
+		kill_tailbench()
+		for pid in pids:
+			os.system("kill -15 " + pid + " >/dev/null 2>&1")
+		pids = ssh_command_pid(host)
+
+
 def run_benchmarks(benchmarks, port):
-	hosts = list()
+	hosts = dict()
 	pids = dict()
 	for (i, benchmark) in enumerate(benchmarks):
 		vcpus = benchmark['nr_vcpus']
 		host = 'vm' + str(i + 1) + '-' + str(vcpus)
 		commands = get_vm_commands(i, benchmark, port, vm_ips[host])
-		hosts.append(host)
+		hosts[i] = host
+		verify_empty_host(host)
 		if "tailbench" in benchmark['bench'][0]:
+			verify_empty_host("client")
 			server, client = commands.split(sc_split)
-			hosts.append("client")
+			hosts[len(benchmarks)] = "client"
 			ssh_server = "ssh " + host + " \'" + server + "\' &"
 			ssh_client = "ssh client \'" + client + "\' &"
 			os.system(ssh_server)

@@ -33,7 +33,10 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 					vms_boot_time[vm_seq_num] = event_epoch
 					vm_times_str[vm_seq_num] = [event_str]
 					vm_output[vm_seq_num] = []
-					vms_vcpus[vm_seq_num] = int(filename.split('/')[-1].split('.')[0].replace("img-dnn", "imgdnn").split('-')[vm_seq_num][-1])
+					filename_backup = filename
+					filename = filename.replace("img-dnn", "imgdnn").replace("tailbench.", "")
+					vms_vcpus[vm_seq_num] = int(filename.split('/')[-1].split('.')[0].split('-')[vm_seq_num][-1])
+					filename = filename_backup
 				elif event_type == "shutdown":
 					limit_hb[vm_seq_num] = 1
 				elif event_type == "spawn":
@@ -142,7 +145,7 @@ def mean_perf_calc(vm_perfs, vm_names, vm_event_times, \
 			continue
 		if vm_perfs[vm] == []:
 			print("List of perfs is empty for vm_seq_num:", vm)
-			print(vm_names[0], vms_vcpus[0], vm_names[1], vms_vcpus[1])
+			print(vm_names, vms_vcpus)
 			continue
 		vcpus = vms_vcpus[vm]
 		duration = time_axis[-1] - time_axis[0]
