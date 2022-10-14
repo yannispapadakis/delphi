@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-from itertools import product
 from models_backend import *
 
 tool = 'perf'

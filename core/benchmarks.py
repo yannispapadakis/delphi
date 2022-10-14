@@ -5,7 +5,6 @@ from operator import add, itemgetter
 from collections import OrderedDict
 from vm_messages_monitor import *
 
-sys.path.append('/home/ypap/actimanager/common/')
 import event_logger
 
 home_dir = '/'.join(os.getcwd().split('/')[:4]) + '/'

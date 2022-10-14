@@ -1,4 +1,4 @@
-import sys
+from sklearn import preprocessing, metrics
 from sklearn.linear_model import LogisticRegression, SGDClassifier, PassiveAggressiveClassifier, Perceptron, RidgeClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from sklearn.svm import SVC, NuSVC, LinearSVC
@@ -10,7 +10,14 @@ from sklearn.experimental import enable_hist_gradient_boosting
 from sklearn.ensemble import RandomForestClassifier, BaggingClassifier, ExtraTreesClassifier, AdaBoostClassifier, HistGradientBoostingClassifier, GradientBoostingClassifier, VotingClassifier
 from sklearn.neural_network import MLPClassifier
 
+import pandas as pd
+from itertools import product
+from heatmap import *
+
 qos_levels = [1 + 0.1 * x for x in range(1, 4)]
+classes_ = [2, 3]
+features = ['sens', 'cont']
+functions = ['cv', 'test']
 models = ['LR', 'SGD', 'PA', 'PER', 'RID', \
 		  'LDA', 'QDA', 'SVC', 'NSVC', 'LSVC', \
 		  'DT', 'KN', 'RN', 'NC', 'GP', 'GNB', \
@@ -72,10 +79,6 @@ def select_model(model, feature, cl, qos, run):
 	return model_library(model, gp_fixed)
 
 #-------------------- Tools --------------------
-import csv
-import pandas as pd
-from sklearn import preprocessing
-from heatmap import *
 
 temp_dir = '/home/ypap/temp/'
 
@@ -151,10 +154,10 @@ def get_train_test(train, test = ''):
 
 def help_message(ex):
 	print("Usage    : %s <function> <feature> <qos> <classes> <model> <train> <test>\n" % ex + \
-		  "Function : " + ' | '.join(['test', 'cv']) + '\n' + \
-		  "Feature  : " + ' | '.join(['sens', 'cont']) + '\n' + \
+		  "Function : " + ' | '.join(functions) + '\n' + \
+		  "Feature  : " + ' | '.join(features) + '\n' + \
 		  "QoS      : " + ' | '.join(map(str, qos_levels)) + "\n" + \
-		  "Classes  : " + ' | '.join(map(str, [2, 3])) + '\n' + \
+		  "Classes  : " + ' | '.join(map(str, classes_)) + '\n' + \
 		  "Model    : " + ' | '.join(models) + '\n' + \
 		  "Train    : " + ' | '.join(benchmark_suites.keys()) + '\n' + \
 		  "Test     : " + ' | '.join(benchmark_suites.keys()))

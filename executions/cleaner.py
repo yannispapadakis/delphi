@@ -1,5 +1,7 @@
 #!/usr/bin/python
-import datetime,sys,os,subprocess, json
+import sys
+sys.path.append("../core/")
+from benchmarks import *
 
 def clean(filename):
 	fp = open(filename)
@@ -87,8 +89,7 @@ def files_at_results(benchmarks):
 		for f in list(filter(lambda x: x != '', files.split('\n'))): clean(f)
 
 def parse_all_files(folders):
-	coexecutions_dir = '/home/ypap/delphi/results/coexecutions/'
-	benchmarks  = subprocess.check_output('ls -rt ' + coexecutions_dir, shell = True).split("\n")[28:-1]
+	benchmarks = subprocess.check_output('ls -rt ' + coexecutions_dir, shell = True).split("\n")[28:-1]
 	to_clean = list()
 	if len(folders):
 		if 'all' in folders: to_clean = benchmarks

@@ -251,10 +251,10 @@ def grid_search(args):
 def help_message(args):
 	print("Usage:   %s <models> <qos> <feature> <class_num>\n" % args[0] + \
 		  "Models:  " + ' | '.join(models + ['all']) + '\n' + \
-		  "QoS:     " + ' | '.join(['1.1', '1.2', '1.3']) + '\n' + \
-		  "Feature: " + ' | '.join(['sens', 'cont']) + '\n' + \
-		  "Classes: " + ' | '.join(['2', '3']) + '\n' + \
-		  "Train:   " + ' | '.join(['s', 'p', 't']))
+		  "QoS:     " + ' | '.join(list(map(str, qos_levels))) + '\n' + \
+		  "Feature: " + ' | '.join(features) + '\n' + \
+		  "Classes: " + ' | '.join(list(map(str, classes_))) + '\n' + \
+		  "Train:   " + ' | '.join(list(benchmark_suites.keys())))
 	return 0
 
 if __name__ == '__main__':
