@@ -14,6 +14,7 @@ isolation_dir = results_dir + 'isolation_runs/'
 heatmap_dir = results_dir + 'heatmaps/'
 predictions_dir = results_dir + 'predictions/'
 gridsearch_dir = results_dir + 'GridSearch/'
+graphs_dir = results_dir + 'graphs/'
 workload_dir = home_dir + 'pairings/workload_pairs/'
 
 vcpus = ['1', '2', '4', '8']

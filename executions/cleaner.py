@@ -71,21 +71,21 @@ def clean(filename):
 		report.append("Multiple SSH processes in: " + filename)
 	if report != []:
 		for r in report: print r
-		dest = '/home/ypap/delphi/results/trash/'
+		dest = results_dir + 'trash/'
 		os.rename(dir_ + filename, dest + filename)
 	else:
 		fn_fix = filename.replace('img-dnn', 'imgdnn')
 		(b1, v1, b2, v2) = [y for x in list(map(lambda x: x.split('_'), fn_fix.split('.txt')[0].split('-'))) for y in x]
 		(b1, b2) = (b1.replace('imgdnn', 'img-dnn'), b2.replace('imgdnn', 'img-dnn'))
-		dest = '/home/ypap/delphi/results/coexecutions/' + b1 + '/' + v1 + 'vs' + v2 + '/'
+		dest = coexecutions_dir + b1 + '/' + v1 + 'vs' + v2 + '/'
 		os.rename(dir_ + filename, dest + filename)
+		if filename in os.listdir(results_dir + 'trash/'): os.remove(results_dir + 'trash/' + filename)
 
 def files_at_results(benchmarks):
-	res_dir = '/home/ypap/delphi/results/'
 	if benchmarks == []:
-		benchmarks = set(map(lambda x: x.split("_")[0], map(lambda x: x.split('-')[0], filter(lambda x: x.endswith('.txt') and not x.startswith('internal'), os.listdir(res_dir)))))
+		benchmarks = set(map(lambda x: x.split("_")[0], map(lambda x: x.split('-')[0], filter(lambda x: x.endswith('.txt') and not x.startswith('internal'), os.listdir(results_dir)))))
 	for bench in benchmarks:
-		files = subprocess.check_output('ls ' + res_dir + bench + '*-*txt', shell = True)
+		files = subprocess.check_output('ls ' + results_dir + bench + '*-*txt', shell = True)
 		for f in list(filter(lambda x: x != '', files.split('\n'))): clean(f)
 
 def parse_all_files(folders):
