@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import sys
 sys.path.append('../core/')
 from read_vm_output import *
@@ -124,7 +124,8 @@ def attach_pqos(all_measures):
 				for (i, event) in list(enumerate(events)):
 					pqos_measures[event].append(float(measure[i]))
 		for event in pqos_measures:
-			all_measures[pqos_file.split('.')[1]][event] = pqos_measures[event]
+			name = pqos_file.split('.csv')[0] if "sphinx-" in pqos_file else pqos_file.split('.')[1]
+			all_measures[name][event] = pqos_measures[event]
 
 ############################################# Main ################################################
 
@@ -136,14 +137,13 @@ def write_perf_measures(all_measures):
 	out_file.close()
 
 def read_perf_measures():
-	in_file = open(isolation_dir + 'perf/accumulated/perf_measures.csv', 'r')
+	try: in_file = open(isolation_dir + 'perf/accumulated/perf_measures.csv', 'r')
+	except: return {}
 	reader = csv.reader(in_file)
 	measures = dict()
 	for row in reader:
-		if row[0] == "Benchmark":
-			measures['Title'] = row
-		else:
-			measures[row[0]] = [row[0]] + list(map(float, row[1:]))
+		if row[0] == "Benchmark": measures['Title'] = row
+		else: measures[row[0]] = [row[0]] + list(map(float, row[1:]))
 	return measures
 
 def perf_files(tool = 'pqos'):
@@ -151,7 +151,7 @@ def perf_files(tool = 'pqos'):
 	if len(tool.split('-')) == 2:
 		(tool, version) = tool.split('-')
 	directory = isolation_dir + tool + ('-' + version if version != '' else '') + '/raw_measures/'
-	files = filter(lambda x: x.endswith('csv'), os.listdir(directory))
+	files = list(filter(lambda x: x.endswith('csv'), os.listdir(directory)))
 	all_measures = dict()
 	if tool == 'pqos':
 		all_measures['Title'] = ['Benchmark', 'IPC', 'LLC_Misses', 'LLC', 'MBL', 'MBR', 'Vcpus', 'Class']
@@ -164,31 +164,34 @@ def perf_files(tool = 'pqos'):
 				measures[event] = np.mean(measures[event])
 			all_measures[bench] = [bench] + list(measures.values()) + [int(bench.replace('img-dnn', 'imgdnn').split('-')[1])]
 	elif tool == 'perf':
-		return read_perf_measures()
-		final_title = []
-		run_periods = time_cleanup('perf')
-		for f in list(filter(lambda x: x.endswith('csv'), files)):
-			if f.split('.')[1] in excluded_benchmarks: continue
-			measures = read_perf_file(f, directory, run_periods[f.split('.')[1]])
-			if final_title == []: final_title = measures.keys()
-			elif final_title != measures.keys(): print("Title error on:", f)
-			all_measures[f.split('.')[1]] = measures
-		if version == '':
-			attach_pqos(all_measures)
-			mpki_calculation(all_measures)
-			apply_mean(all_measures)
-			for bench in all_measures:
-				final_title = list(all_measures[bench].keys())
-				all_measures[bench] = [bench] + list(all_measures[bench].values())
-			all_measures['Title'] = ['Benchmark'] + final_title + ['Class']
-			write_perf_measures(all_measures)
-		elif version == 'sp':
-			apply_mean(all_measures)
-			for bench in all_measures:
-				all_measures[bench].pop('instructions')
-				final_title = list(all_measures[bench].keys())
-				all_measures[bench] = [bench] + list(all_measures[bench].values())
-			all_measures['Title'] = ['Benchmark'] + final_title + final_title + ['Slowdown']
+		cached_measures = read_perf_measures()
+		if len(files) == len(list(cached_measures.keys())): return cached_measures
+		else:
+			final_title = []
+			run_periods = time_cleanup('perf')
+			for f in list(filter(lambda x: x.endswith('csv'), files)):
+				if f.split('.')[1] in excluded_benchmarks: continue
+				measures = read_perf_file(f, directory, run_periods[f.split('.')[1]])
+				if final_title == []: final_title = measures.keys()
+				elif final_title != measures.keys(): print("Title error on:", f)
+				name = f.split('.csv')[0] if 'sphinx-' in f else f.split('.')[1]
+				all_measures[name] = measures
+			if version == '':
+				attach_pqos(all_measures)
+				mpki_calculation(all_measures)
+				apply_mean(all_measures)
+				for bench in all_measures:
+					final_title = list(all_measures[bench].keys())
+					all_measures[bench] = [bench] + list(all_measures[bench].values())
+				all_measures['Title'] = ['Benchmark'] + final_title + ['Class']
+				write_perf_measures(all_measures)
+			elif version == 'sp':
+				apply_mean(all_measures)
+				for bench in all_measures:
+					all_measures[bench].pop('instructions')
+					final_title = list(all_measures[bench].keys())
+					all_measures[bench] = [bench] + list(all_measures[bench].values())
+				all_measures['Title'] = ['Benchmark'] + final_title + final_title + ['Slowdown']
 	return all_measures
 
 def time_cleanup(tool = 'perf'):

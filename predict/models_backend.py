@@ -150,17 +150,15 @@ def get_train_test(train, test = ''):
 	train = [x for sublist in list(map(lambda x: benchmark_suites[x], train.split(','))) for x in sublist]
 	if test != '':
 		return (train, [x for sublist in list(map(lambda x: benchmark_suites[x], test.split(','))) for x in sublist])
-	return train
+	return (train, [])
 
 def help_message(ex):
-	print("Usage    : %s <function> <feature> <qos> <classes> <model> <train> <test>\n" % ex + \
-		  "Function : " + ' | '.join(functions) + '\n' + \
-		  "Feature  : " + ' | '.join(features) + '\n' + \
-		  "QoS      : " + ' | '.join(map(str, qos_levels)) + "\n" + \
-		  "Classes  : " + ' | '.join(map(str, classes_)) + '\n' + \
-		  "Model    : " + ' | '.join(models) + '\n' + \
-		  "Train    : " + ' | '.join(benchmark_suites.keys()) + '\n' + \
-		  "Test     : " + ' | '.join(benchmark_suites.keys()))
+	print(f"Usage    : {ex} <function> <feature> <qos> <classes> <model> <train> <test>\n" + \
+		  f"Function : {' | '.join(functions)}\nFeature  : {' | '.join(features)}\n" + \
+		  f"QoS      : {' | '.join(map(str, qos_levels))}\n" + \
+		  f"Classes  : {' | '.join(map(str, classes_))}\nModel    : {' | '.join(models)}\n" + \
+		  f"Train    : {' | '.join(benchmark_suites.keys())}\n" + \
+		  f"Test     : {' | '.join(benchmark_suites.keys())}")
 	return 0
 
 def arg_check(args):
@@ -168,11 +166,9 @@ def arg_check(args):
 	(func, feature, qos, class_num, model, train) = args[1:7]
 	qos = float(qos)
 	class_num = int(class_num)
-	if func not in ['cv', 'test'] or \
-	   feature not in ['sens', 'cont'] or \
-	   qos not in qos_levels or \
-	   class_num not in [2, 3] or \
-	   model not in models or \
-	   (func == 'test' and len(args) < 8):
-	   sys.exit(help_message(args[0]))
-	return [func, feature, qos, class_num, model] + args[6:]
+	if func not in functions or feature not in features or \
+	   qos not in qos_levels or class_num not in classes_ or \
+	   model not in models or (func == 'test' and len(args) < 8):
+		sys.exit(help_message(args[0]))
+	test = '' if func != 'test' else args[7]
+	return [func, feature, qos, class_num, model, train, test]

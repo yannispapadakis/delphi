@@ -40,9 +40,9 @@ run_coexecution()
 	for i in ${!benches1[@]}; do
 		IFS=',' read -r -a benches2 <<< "$benchmarks2"
 		for j in ${!benches2[@]}; do
-			#if [[ ("${benches1[$i]}" == "shore" && "$vcpus1" == "1") || ("${benches1[$i]}" == "masstree" && "$vcpus1" == "8") ]]; then
-			#	continue
-			#fi
+			if [[ ("${benches1[$i]}" == "shore" && "$vcpus1" == "1") || ("${benches1[$i]}" == "masstree" && "$vcpus1" == "8") ]]; then
+				continue
+			fi
 			#if [ $j -ge $i ]; then
 			echo $(date +"%F %T") ":" "${benches1[$i]}" "(" $vcpus1 ")" "vs" "${benches2[$j]}" "(" $vcpus2 ")"
 			output_file="${benches1[$i]}_${vcpus1}-${benches2[$j]}_${vcpus2}.txt"

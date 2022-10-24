@@ -40,6 +40,7 @@ def fill_missing(heatmap, dirs):
 			name_0 = name_0.replace('img-dnn', 'imgdnn')
 			name_0 = name_0.split('-')[3] if 'parsec' in name_0 else name_0.split('-')[2 + int('spec' in name_0)].split('.')[1]
 			name_0 = name_0.replace('imgdnn', 'img-dnn')
+			if name_0 == "sphinx": name_0 = 'tailbench.' + name_0
 			name_1 = name_1.split('-')[3] if 'parsec' in name_1 else name_1.split('-')[3].split('.')[1]
 			(vcpus_0, vcpus_1) = (str(measures['vms_vcpus'][0]), str(measures['vms_vcpus'][1]))
 			bench1 = name_0 + '-' + vcpus_0
