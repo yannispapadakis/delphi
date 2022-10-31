@@ -132,7 +132,6 @@ def verify_empty_host(host):
 			os.system("kill -15 " + pid + " >/dev/null 2>&1")
 		pids = ssh_command_pid(host)
 
-
 def run_benchmarks(benchmarks, port):
 	hosts = dict()
 	pids = dict()

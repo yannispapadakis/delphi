@@ -57,14 +57,14 @@ def clean(filename):
 	os.rename('output.txt', filename)
 	for vm in hb_completed:
 		if hb_expected[vm] > hb_completed[vm]:
-			print(f"{hb_completed[vm]}/{hb_expected[vm]} executions of VM: {vm} ({filename.split('/')[-1]})")
+			print(str(hb_completed[vm]) + '/' + str(hb_expected[vm]) + " executions of VM: " + str(vm) + " (" + filename.split('/')[-1] + ")")
 	if '/' in filename:
 		dir_fn = filename.split('/')
 		(dir_, filename) = ('/'.join(dir_fn[:-1] + ['']), dir_fn[-1])
-	if tail_exists and tail_failed == tail_total: report.append(f"All executions failed in: {filename}")
-	if parsec_failed > 0: report.append(f"At least one execution returned empty output in: {filename}")
-	if disk_failed > 0: report.append("Disk had no space in: {filename}")
-	if ssh_fail > 0: report.append(f"Multiple SSH processes in: {filename}")
+	if tail_exists and tail_failed == tail_total: report.append("All executions failed in: " + filename)
+	if parsec_failed > 0: report.append("At least one execution returned empty output in: " + filename)
+	if disk_failed > 0: report.append("Disk had no space in: " + filename)
+	if ssh_fail > 0: report.append("Multiple SSH processes in: " + filename)
 	if report != []:
 		for r in report: print r
 		dest = results_dir + 'trash/'
@@ -81,7 +81,10 @@ def files_at_results(benchmarks):
 	if benchmarks == []:
 		benchmarks = set(map(lambda x: x.split("_")[0], map(lambda x: x.split('-')[0], filter(lambda x: x.endswith('.txt') and not x.startswith('internal'), os.listdir(results_dir)))))
 	for bench in benchmarks:
-		files = subprocess.check_output('ls ' + results_dir + bench + '*-*txt', shell = True)
+		try: files = subprocess.check_output("ls " + results_dir + bench + "*-*txt", shell=True)
+		except:
+			print("No runs for benchmark:", bench)
+			continue
 		for f in list(filter(lambda x: x != '', files.split('\n'))): clean(f)
 
 def parse_all_files(folders):

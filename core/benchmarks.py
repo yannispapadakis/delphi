@@ -87,6 +87,7 @@ specs = [x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 's
 parsecs = [x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 'parsec' in x, benches_vcpus.keys())) for y in vcpus]
 tails = list(filter(lambda x: x not in excluded_benchmarks,
 			[x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 'tailbench' in x, benches_vcpus.keys())) for y in vcpus]))
+tails = list(map(lambda x: x if 'sphinx' not in x else 'tailbench.' + x, tails))
 benchmark_suites = {'s': specs, 'p': parsecs, 't': tails}
 
 ##################### Execution configs ##################### 

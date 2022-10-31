@@ -45,7 +45,7 @@ def prediction(args):
 	for x in range(2): os.remove(temp_dir + data_name + str(x) + '.csv')
 
 	if type(args[4]) == str:
-		if func == 'test': print_pred(answers, f"{results_dir}predictions/{args[4]}/{'_'.join([args[4], feature, str(class_num), str(qos), func])}.csv", np.mean(acc_scores))
+		if func == 'test': print_pred(answers, f"{results_dir}predictions/{args[4]}/{'_'.join([args[4], feature, str(class_num), str(qos), train.replace(',','') + '-' + test, func])}.csv", np.mean(acc_scores))
 		print(f"{func.upper()}: {feature} | {qos} | C:{class_num} | {args[4]}{' ' * (4 - len(args[4]))} | {100 * round(np.mean(acc_scores), 4)}%")
 
 	return (np.mean(acc_scores), answers)
