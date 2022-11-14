@@ -139,6 +139,18 @@ def nc_grid(feature, class_num, qos, train, fd):
 	search_space = [shrink_threshold, metrics]
 	return grid_run("NC", search_space, lambda x: False, feature, class_num, qos, train, fd)
 
+def nca_grid(feature, class_num, qos, train, fd):
+	init = ['auto', 'pca', 'lda', 'random', 'identity']
+	tolerance = [1e-3, 1e-4, 1e-5]
+	max_iters = [10000]
+	n_neighs = [2, 5, 8, 10]
+	weights_ = ['distance', 'uniform']
+	algorithms = ['ball_tree', 'kd_tree', 'brute']
+	leaf_sizes = [15, 30, 45]
+	ps = [1, 2, 3]
+	search_space = [init, tolerance, max_iters, n_neighs, weights_, algorithms, leaf_sizes, ps]
+	return grid_run("NCA", search_space, lambda x: False, feature, class_num, qos, train, fd)
+
 def gp_grid(feature, class_num, qos, train, fd):
 	search_space = []
 	return grid_run("GP", search_space, lambda x: False, feature, class_num, qos, train, fd)
@@ -226,7 +238,7 @@ def grid_run(model_str, search_space, mismatch, feature, class_num, qos, train, 
 
 grid_methods = {'LR': lr_grid, 'PA': pa_grid, 'SGD': sgd_grid, 'PER': per_grid, 'RID': rid_grid, \
 				'LDA': lda_grid, 'QDA': qda_grid, 'SVC': svc_grid, 'NSVC': nsvc_grid, 'LSVC': lsvc_grid, \
-				'KN': kn_grid, 'RN': rn_grid, 'NC': nc_grid, 'GP': gp_grid, 'GNB': gnb_grid, 'DT': dt_grid, \
+				'KN': kn_grid, 'RN': rn_grid, 'NC': nc_grid, 'NCA': nca_grid, 'GP': gp_grid, 'GNB': gnb_grid, 'DT': dt_grid, \
 				'RF': rf_grid, 'ET': et_grid, 'AB': ab_grid, 'HGB': hgb_grid, 'GB': gb_grid, 'MLP': mlp_grid}
 
 def grid_search(args):

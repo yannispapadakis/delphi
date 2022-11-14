@@ -18,6 +18,12 @@ graphs_dir = results_dir + 'graphs/'
 workload_dir = home_dir + 'pairings/workload_pairs/'
 
 vcpus = ['1', '2', '4', '8']
+qos_levels = [1 + 0.1 * x for x in range(1, 4)]
+classes_ = [2, 3]
+features = ['sens', 'cont']
+functions = ['cv', 'test']
+models = ['LR', 'SGD', 'PA', 'PER', 'RID', 'LDA', 'QDA', 'SVC', 'NSVC', 'LSVC', \
+		  'DT', 'KN', 'RN', 'NC', 'NCA', 'GP', 'GNB', 'RF', 'ET', 'AB', 'HGB', 'GB', 'MLP']
 
 p95 = True
 excluded_benchmarks = ['shore-1', 'masstree-8']

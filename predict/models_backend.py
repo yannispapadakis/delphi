@@ -14,15 +14,6 @@ import pandas as pd
 from itertools import product
 from heatmap import *
 
-qos_levels = [1 + 0.1 * x for x in range(1, 4)]
-classes_ = [2, 3]
-features = ['sens', 'cont']
-functions = ['cv', 'test']
-models = ['LR', 'SGD', 'PA', 'PER', 'RID', \
-		  'LDA', 'QDA', 'SVC', 'NSVC', 'LSVC', \
-		  'DT', 'KN', 'RN', 'NC', 'GP', 'GNB', \
-		  'RF', 'ET', 'AB', 'HGB', 'GB', 'MLP']
-
 def model_library(model_str, gp):
 	if model_str == "LR":   return LogisticRegression(penalty = gp[0], tol = gp[1], C = gp[2], solver = gp[3], l1_ratio = gp[4], max_iter = gp[5])
 	if model_str == "PA":   return PassiveAggressiveClassifier(C = gp[0], tol = gp[1], loss = gp[2])
@@ -37,6 +28,7 @@ def model_library(model_str, gp):
 	if model_str == "KN":   return KNeighborsClassifier(n_neighbors = gp[0], weights = gp[1], algorithm = gp[2], leaf_size = gp[3], p = gp[4])
 	if model_str == "RN":   return RadiusNeighborsClassifier(radius = gp[0], weights = gp[1], algorithm = gp[2], leaf_size = gp[3], p = gp[4], outlier_label = gp[5])
 	if model_str == "NC":   return NearestCentroid(shrink_threshold = gp[0], metric = gp[1])
+	if model_str == "NCA":  return Pipeline([('nca', NeighborhoodComponentsAnalysis(init = gp[0], tol = gp[1], max_iter = gp[2])), ('knn', KNeighborsClassifier(n_neighbors = gp[3], weights = gp[4], algorithm = gp[5], leaf_size = gp[6], p = gp[7]))])
 	if model_str == "GP":   return GaussianProcessClassifier()
 	if model_str == "GNB":  return GaussianNB(var_smoothing = gp[0])
 	if model_str == "DT":   return DecisionTreeClassifier(criterion = gp[0], splitter = gp[1], min_samples_split = gp[2], min_samples_leaf = gp[3], max_features = gp[4])

@@ -73,10 +73,8 @@ def transpose_heatmap(heatmap):
 				continue
 	return heatmapT
 
-def classes(heatmap, qos, class_num = 2):
-	clos = dict()
-	whiskers = dict()
-	quartiles3 = dict()
+def classes(heatmap, qos = 1.2, class_num = 2):
+	(clos, whiskers, quartiles3) = ({}, {}, {})
 	for bench in heatmap.keys():
 		if not heatmap[bench]: continue
 		measures = list(map(float, heatmap[bench].values()))
@@ -112,11 +110,21 @@ def get_heatmap(benchmarks, feature = 'sens', qos = 1.2, class_num = 3):
 		heatmap = transpose_heatmap(heatmap)
 	return classes(heatmap, qos, class_num)
 
+def print_whiskers(heatmap, heatmapT):
+	fd = open(f"{heatmap_dir}whisker-stats.csv", 'w')
+	writer = csv.writer(fd)
+	sens_whiskers = classes(heatmap)[1]
+	cont_whiskers = classes(heatmapT)[1]
+	for bench in sens_whiskers: writer.writerow([bench, sens_whiskers[bench], cont_whiskers[bench]])
+	fd.close()
+
 def write_heatmap():
 	heatmap = spawn_heatmap([])
 	calculate_heatmap(heatmap)
 	print_heatmap(heatmap)
-	print_heatmap(transpose_heatmap(heatmap), 'T')
+	heatmapT = transpose_heatmap(heatmap)
+	print_heatmap(heatmapT, 'T')
+	print_whiskers(heatmap, heatmapT)
 
 if __name__ == '__main__':
 	write_heatmap()
