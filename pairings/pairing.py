@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import sys
 sys.path.append('../predict/')
 from heatmap import *
 #from attackers_read import attacker_classifier
@@ -6,299 +7,265 @@ from heatmap import *
 from matching.algorithms import stable_roommates
 from matching import Player
 
-clos = 1.1
 report = ''
-grid = generate_grid()
-read_grid(grid)
-
-pred_dir = home_dir + 'results/predictions/'
-wd_dir = home_dir + 'pairings/workload_pairs/' 
+heatmap = spawn_heatmap()
+read_heatmap(heatmap)
+workload_files = list(map(lambda x: x.split('.')[0], filter(lambda x: x.endswith('csv'), os.listdir(workload_dir))))
 
 """--------------------------- Random Pairing -----------------------------"""
-def random_pairs(benchmarks):
-	benchmarks = list(map(lambda x: (int(x.split('.')[0]), x.split('.')[1]), benchmarks))
+def random_pairs(benchmarks, version, class_):
+	benchmarks = list(map(name_fix, benchmarks))
 	while 1:
 		try:
-			pairs = []
-			paired_ids = []
+			(pairs, paired_ids) = ([], [])
 			for bench1 in benchmarks:
 				if bench1[0] in paired_ids: continue
-				valids = [bench2 for bench2 in benchmarks if bench2[0] not in paired_ids and bench1[0] != bench2[0]]
+				valids = list(filter(lambda x: x[0] not in paired_ids and x[0] != bench1[0], benchmarks))
 				bench2 = random.choice(valids)
-				pairs.append([str(bench1[0]) +'.'+ bench1[1], str(bench2[0]) +'.'+ bench2[1]])
+				pairs.append([bench1, bench2])
 				paired_ids.extend([bench1[0], bench2[0]])
 			return pairs
 		except IndexError:
 			continue
 
 """------------------ Stable Roommates based Algorithms -------------------"""
-def oracle(benchmarks, mode = 'real'):
+def oracle(benchmarks, version, class_):
 	players = [Player(x) for x in benchmarks]
 
 	window = dict()
-	if mode == 'real': use_grid = grid
-	elif mode == 'pred':
-		use_grid = generate_grid()
-		read_grid(use_grid, 'pred_grid')
+	if version == 'r': use_heatmap = heatmap
+	else:
+		use_heatmap = spawn_heatmap()
+		read_heatmap(use_heatmap, 'pred_heatmap')
 	for bench1 in players:
 		window[bench1] = dict()
+		clos = float(bench1.name.split(',')[2])
 		for bench2 in set(players).difference([bench1]):
-			try:
-				window[bench1][bench2] = use_grid[bench1.name.split('.')[1]][bench2.name.split('.')[1]]
-			except:
-				window[bench1][bench2] = 0
-		bench1.prefs = list(map(lambda x: x[0],
-						sorted([x for x in window[bench1].items() if float(x[1]) < clos], reverse = True,
-						key = itemgetter(1))))
+			try: window[bench1][bench2] = use_heatmap[bench1.name.split(',')[1]][bench2.name.split(',')[1]]
+			except: window[bench1][bench2] = 0
+		bench1.prefs =  list(map(lambda x: x[0],
+						sorted(filter(lambda x: float(x[1]) < clos, window[bench1].items()),
+						reverse = True, key = itemgetter(1))))
 		bench1.prefs += list(map(lambda x: x[0],
-						sorted([x for x in window[bench1].items() if float(x[1]) >= clos],
+						sorted(filter(lambda x: float(x[1]) >= clos, window[bench1].items()),
 						key = itemgetter(1))))
 	return players_to_str(stable_roommates(players))
 
-def get_whiskers():
-	dicts = []
-	for feature in ['sens', 'cont']:
-		f = open(pred_dir + feature + '-stats.csv', mode = 'r')
-		reader = csv.reader(f)
-		whiskers = dict((rows[0], rows[-1]) for rows in reader)
-		del whiskers['Benchmark']
-		dicts.append(whiskers)
-		f.close()
-	return dicts
-
-def whisker(benchmarks):
+def whisker(benchmarks, version, class_):
 	players = [Player(x) for x in benchmarks]
 
-	(sens_whiskers, cont_whiskers) = get_whiskers()
-	whiskers = dict((x, (float(sens_whiskers[x.name.split('.')[1]]), float(cont_whiskers[x.name.split('.')[1]]))) for x in players)
-	prefs = dict()
+	f = open(f"{heatmap_dir}whisker-stats.csv", 'r')
+	whisk_str = dict((rows[0], (float(rows[1]), float(rows[2]))) for rows in csv.reader(f))
+	f.close()
+	whiskers = dict((x, whisk_str[x.name.split(',')[1]]) for x in players)
 
 	for bench in players:
+		clos = float(bench.name.split(',')[2])
 		if whiskers[bench][0] < clos:
 			bench.prefs = list(map(lambda x: x[0],
-							sorted([x for x in whiskers.items() if x[0] != bench], reverse = True,
-							key = lambda x: x[1][1])))
+							sorted(filter(lambda x: x[0] != bench, whiskers.items()),
+							reverse = True, key = lambda x: x[1][1])))
 		else:
 			bench.prefs = list(map(lambda x: x[0],
-							sorted([x for x in whiskers.items() if x[1][1] < clos and x[0] != bench], reverse = True,
-							key = lambda x: x[1][1])))
+							sorted(filter(lambda x: x[1][1] < clos and x[0] != bench, whiskers.items()),
+							reverse = True, key = lambda x: x[1][1])))
 			bench.prefs += list(map(lambda x: x[0],
-							sorted([x for x in whiskers.items() if x[1][1] >= clos and x[0] != bench],
+							sorted(filter(lambda x: x[1][1] >= clos and x[0] != bench, whiskers.items()),
 							key = lambda x: x[1][1])))
 	return players_to_str(stable_roommates(players))
 
-"""---------------------- Custom Pairing Algorithm ------------------------"""
-def pair_together(list_to_pair, n, list2):
+def players_to_str(holds):
+	try: holds = dict((name_fix(x.name), name_fix(holds[x].name)) for x in holds)
+	except AttributeError: return -1
 	pairs = []
-	while n < len(list2) and len(list_to_pair) > 1:
-		b1, b2 = list_to_pair[:2]
-		list_to_pair = list_to_pair[2:]
-		list2 = list(set(list2).difference([b1, b2]))
-		pairs.append((b1, b2))
-	return (pairs, list2)
+	for bench1 in holds:
+		bench2 = holds[bench1]
+		if bench2 in [x[0] for x in pairs]: continue
+		pairs.append([bench1, bench2])
+	return pairs
 
-def zipthem(zeros, notzeros):
-	zeros1 = zeros[:len(notzeros)]
-	zeros2 = zeros[len(notzeros):]
-	return list(zip(zeros1, notzeros)) + list(zip(zeros2[:int(len(zeros2) / 2)], zeros2[int(len(zeros2) / 2):]))
-
-def get_model(feature, classes, qos = clos):
-	accs = dict()
-	for model in ['SVC', 'DT', 'KN', 'RF']:
-		cmd = 'tail -n1 ' + pred_dir + model + '/' + '_'.join(map(str, [feature, classes, qos, model])) + '.csv'
-		last_line = subprocess.check_output(cmd, shell = True)
-		accs[model] = float(str(last_line).split('t')[1].split(' ')[0])
-	model = max(accs.items(), key = itemgetter(1))[0]
+"""---------------------- delphi Pairing Algorithm ------------------------"""
+def get_model(feature, classes, qos):
+	run = "sp_cv"
+	accuracy = dict()
+	for model in models:
+		try: model_pred = open(f"{predictions_dir}{model}/{model}_{feature}_{classes}_{qos}_{run}.csv", 'r')
+		except: continue
+		predictions = [int(line[1] == line[2]) for line in csv.reader(model_pred, delimiter='\t') if line[0] != 'Bench']
+		accuracy[model] = sum(predictions) / float(len(predictions))
+		model_pred.close()
+	model = max(accuracy.items(), key = itemgetter(1))[0]
 	global report
-	report += feature + ': ' + model + ' '
-	return pred_dir + model + '/' + '_'.join(map(str, [feature, classes, qos, model])) + '.csv'
+	report += f"{feature} ({qos}): {model} | "
+	return f"{predictions_dir}{model}/{model}_{feature}_{classes}_{qos}_{run}.csv"
 
-def get_predictions(benchmarks, real, classes):
-	predictions = dict()
-	features = ['sens', 'cont']
-	for f in features:
-		with open(get_model(f, classes), mode='r') as pred:
-			reader = csv.reader(pred, delimiter='\t')
-			predictions[f] = dict((rows[0], rows[-1 if real else 1]) for rows in reader)
-			del predictions[f]['Bench']
-			del predictions[f]['Accuracy']
-			pred.close()
-	return dict((x, (int(predictions['sens'][x.split('.')[1]]), int(predictions['cont'][x.split('.')[1]]))) for x in benchmarks)
+def delphi(benchmarks, version, classes):
+	def pair_together(list_to_pair, n, list2):
+		pairs = []
+		while n < len(list2) and len(list_to_pair) > 1:
+			b1, b2 = list_to_pair[:2]
+			list_to_pair = list_to_pair[2:]
+			list2 = list(set(list2).difference([b1, b2]))
+			pairs.append((b1, b2))
+		return (pairs, list2)
 
-def get_attacker(benchmarks):
-	classes = attacker_classifier()
-	return dict((x, classes[x.split('.')[1]]) for x in benchmarks)
+	def zipthem(zeros, notzeros):
+		zeros1 = zeros[:len(notzeros)]
+		zeros2 = zeros[len(notzeros):]
+		return list(zip(zeros1, notzeros)) + list(zip(zeros2[:int(len(zeros2) / 2)], zeros2[int(len(zeros2) / 2):]))
 
-def custom(benchmarks, real = False, classes = 3, attackers = False):
-	if attackers: preds = get_attacker(benchmarks)
-	else: preds = get_predictions(benchmarks, real, classes)
-	zeros = [x for x in preds.items() if sum(x[1]) == 0]
+	def get_predictions(benchmarks, version, classes):
+		predictions = dict()
+		qos = min(map(lambda x: float(x.split(',')[2]), benchmarks))
+		for f in features:
+			with open(get_model(f, classes, qos), mode='r') as pred:
+				predictions[f] = dict((rows[0], rows[1 + int(version == 'r')]) for rows in csv.reader(pred, delimiter='\t') if rows[0] != 'Bench')
+				pred.close()
+		return dict((x, (int(predictions['sens'][x.split(',')[1]]), int(predictions['cont'][x.split(',')[1]]))) for x in benchmarks)
+
+	def get_attacker(benchmarks):
+		classes = attacker_classifier()
+		return dict((x, classes[x.split(',')[1]]) for x in benchmarks)
+
+	preds = get_attacker(benchmarks) if version == 'a' else get_predictions(benchmarks, version, classes)
+	zeros = list(filter(lambda x: sum(x[1]) == 0, preds.items()))
 	random.shuffle(zeros)
-	notzeros = [x for x in preds.items() if x not in zeros]
+	notzeros = list(set(preds.items()).difference(zeros))
 	order = [(1,0), (0,1), (2,0), (0,2), (2,2), (2,1), (1,2), (1,1)]
 	pairs = []
 	if len(zeros) < len(notzeros):
 		for comb in order:
-			removing = [x for x in notzeros if x[1] == comb]
+			removing = list(filter(lambda x: x[1] == comb, notzeros))
 			random.shuffle(removing)
 			(new_pairs, notzeros) = pair_together(removing, len(zeros), notzeros)
 			pairs += new_pairs
 			if len(zeros) >= len(notzeros):
 				break
 	pairs += zipthem(zeros, notzeros)
-	return list(map(lambda x: [x[0][0], x[1][0]], pairs))
+	return list(map(lambda x: [name_fix(x[0][0]), name_fix(x[1][0])], pairs))
+
+"""---------------------- delphi Pairing Algorithm - mult SLOs ------------"""
+def delphi_2(benchmarks, version, classes):
+	def get_predictions(benchmarks, version, classes):
+		predictions = dict()
+		slos = sorted(list(set(map(float, map(lambda x: x.split(',')[2], benchmarks)))))
+		for s in slos:
+			predictions[s] = dict()
+			for f in features:
+				pred_f = open(get_model(f, classes, s), mode = 'r')
+				predictions[s][f] = dict((rows[0], int(rows[1 + int(version == 'r')])) for rows in csv.reader(pred_f, delimiter='\t') if rows[0] != 'Bench')
+				pred_f.close()
+		return dict((f"{i},{name},{slo}", 
+					{'slo': float(slo),
+					 'sens': predictions[float(slo)]['sens'][name],
+					 'cont': dict((i, predictions[i]['cont'][name]) for i in slos)}) \
+					for (i, name, slo) in map(lambda x: x.split(','), benchmarks))
+
+	def exhaustive_matrix(preds):
+		benchmarks = list(preds.keys())
+		for row in preds:
+			preds[row]['heatmap'] = dict()
+			for col in set(benchmarks).difference([row]):
+				deny = (preds[row]['sens'] and preds[col]['cont'][preds[row]['slo']]) or \
+					   (preds[col]['sens'] and preds[row]['cont'][preds[col]['slo']])
+				preds[row]['heatmap'][col] = ((preds[row]['sens'], preds[col]['cont'][preds[row]['slo']]), deny)
+
+	def sort_benchmarks(preds):
+		return sorted(sorted(sorted(sorted(list(preds.items()),
+			key = lambda x: x[1]['slo'], reverse = True),
+			key = lambda x: sum(x[1]['cont'].values()), reverse = True),
+			key = lambda x: x[1]['sens'], reverse = True),
+			key = lambda x: sum(map(lambda y: y[1], x[1]['heatmap'].values())), reverse = True)
+
+	def wont_find_candidate(queue):
+		total_cand_list = []
+		for (i, bench) in enumerate(queue):
+			candidate_list = list(map(lambda x:x[0], filter(lambda y: y[1][1] == 0, bench[1]['heatmap'].items())))
+			total_cand_list = list(set(total_cand_list + candidate_list).difference([bench[0]]))
+			if len(total_cand_list) < (i + 1): return i
+		return -1
+
+	def bad_pairing(queue):
+		pairs = []
+		error_index = wont_find_candidate(queue)
+		while error_index > -1:
+			error_bench = queue.pop(error_index)
+			bench_to_pair = queue.pop(0)
+			#print(f"BENCH: {error_bench[0]} (idx: {error_index}) will be badly paired with: {bench_to_pair[0]}")
+			pairs.append((error_bench[0], bench_to_pair[0]))
+			error_index = wont_find_candidate(queue)
+		return (pairs, queue)
+
+	preds = get_predictions(benchmarks, version, classes)
+	exhaustive_matrix(preds)
+	queue = sort_benchmarks(preds)
+	#for x in queue: print(f"{x[0]}{' '*(20 - len(x[0]))}{x[1]['slo']}{' '*4}{x[1]['sens']}{' '*4}{x[1]['cont']}{' '*4}{sum(map(lambda y: y[1], x[1]['heatmap'].values()))}")
+	pairs = []
+	(pairs, queue) = bad_pairing(queue)
+	scrap = []
+	while queue:
+		bench = queue.pop(0)
+		candidates = list(filter(lambda y: y[1][1] == 0 and y[0] in map(lambda x: x[0], queue), bench[1]['heatmap'].items()))
+		if len(candidates) == 0:
+			print(f"No candidates for {bench[0]}")
+			scrap.append(bench)
+		else:
+			sens_combination = max(set(map(lambda x: x[1][0], candidates)), key = lambda y: sum(y))
+			sens_candidates = list(map(lambda z: z[0], filter(lambda y: y[1][0] == sens_combination, candidates)))
+			cont_combination = max([preds[cand]['heatmap'][bench[0]][0] for cand in sens_candidates])
+			cont_candidates = list(filter(lambda x: preds[x]['heatmap'][bench[0]][0] == cont_combination, sens_candidates))
+			pred_candidates = dict((x[0], x[1]) for x in filter(lambda x: x[0] in cont_candidates, preds.items()))
+			sub_queue = sort_benchmarks(pred_candidates)
+			pair = queue.pop(queue.index(sub_queue[0]))
+			pairs.append((bench[0], pair[0]))
+	return list(map(lambda x: map(name_fix, x), pairs))
 
 """------------------------- Helper Functions -----------------------------"""
 def violations_counter(pairs):
-	sd = dict()
-	for bb1,bb2 in pairs:
-		b1 = bb1.split('.')[1]
-		b2 = bb2.split('.')[1]
-		try:
-			sd1 = grid[b1][b2]
-		except KeyError:
-			sd1 = 0
-		try:
-			sd2 = grid[b2][b1]
-		except:
-			sd2 = 0
-		sd[bb1+'_'+bb2] = (sd1, sd2)
 	violations = 0
-	for p in sd:
-		m1, m2 = sd[p]
-		violations += int(m1 > clos) + int(m2 > clos)
-		#print(p.split('_')[0] + ',' + p.split('_')[1] + ',' + str(m1) + ',' + str(m2))
+	for (bench1, bench2) in pairs:
+		(name1, name2) = (bench1[1], bench2[1])
+		try: sd1 = heatmap[name1][name2]
+		except KeyError: sd1 = 0
+		try: sd2 = heatmap[name2][name1]
+		except KeyError: sd2 = 0
+		violations += int(sd1 > bench1[2]) + int(sd2 > bench2[2])
 	return violations
-
-def fix_pairing(holds):
-	if not holds: return -1
-	if type(holds) == dict:
-		pairs = []
-		if not holds: return -1
-		for bench1 in holds:
-			bench2 = holds[bench1]
-			if bench2 in [x[0] for x in pairs]: continue
-			pairs.append([bench1,bench2])
-	else: pairs = holds
-	violations = violations_counter(pairs)
-	pairs = map(lambda x: [x[0].split('.')[1], x[1].split('.')[1]], pairs)
-	return violations
-
-def players_to_str(pairs):
-	try:
-		return dict((x.name, pairs[x].name) for x in pairs)
-	except AttributeError:
-		return {}
-
-def print_results(results):
-	fd = open(csv_dir + 'violations/' + 'violations_' + str(clos) + '.csv', 'w')
-	wr = csv.writer(fd, delimiter = ',')
-	sizes = list(map(str, sorted(map(int, results.keys()))))
-	files = list(results[sizes[0]].keys())[::-1]
-	algorithms = results[sizes[0]][files[0]].keys()
-	for size in sizes:
-		wr.writerow([size] + files)
-		for algo in algorithms:
-			algo_pr = algo
-			if '_' in algo:
-				tokens = algo.split('_')
-				algo_pr = tokens[0].title() + ' (' + tokens[1].title() + ', ' + tokens[2] + ')'
-			row = [algo_pr]
-			for f in files:
-				row.append(results[size][f][algo])
-			wr.writerow(row)
-		wr.writerow([])
-	fd.close()
-
-def decide_pairs(benchmarks, algo, real = True, classes = 2):
-	benchmarks = list(set([str(i) + '.' + x for (i, x) in enumerate(benchmarks)]))
-	if algo == 'random':
-		pairs = random_pairs(benchmarks)
-	elif algo in ['oracle', 'forest']:
-		pairs = oracle(benchmarks, 'real' if algo == 'oracle' else 'pred')
-	elif algo == 'whisker':
-		pairs = whisker(benchmarks)
-	elif algo in ['custom', 'attackers']:
-		pairs = custom(benchmarks, real, classes, algo == 'attackers')
-	return fix_pairing(pairs)
-			
-def help_message(ex):
-	msg =  "Usage for loop:    %s loop <clos>\n" % ex
-	msg += "Usage for manual:  %s <clos> <workload> <algorithm> <real> <classes>\n" % ex
-	msg += "CLoS:              " + ' | '.join(sorted(set(map(lambda x: x.split('_')[2], os.listdir(pred_dir + 'SVC/'))))) + '\n'
-	msg += "Workload:          " + ' | '.join(list(map(lambda x: x.split('.')[0], filter(lambda x: x.endswith('csv'), os.listdir('workload_pairs/'))))) +'\n'
-	msg += "Algorithms:        " + ' | '.join(['oracle', 'forest', 'attackers', 'whisker', 'random', 'custom']) +'\n'
-	msg += "Real:    (custom)  " + ' | '.join(['real', 'pred']) +'\n'
-	msg += "Classes: (custom)  " + ' | '.join(['2','3']) 
-	print(msg)
-	return 0
+	
+def name_fix(name):
+	tokens = name.split(',')
+	return (int(tokens[0]), tokens[1], float(tokens[2]))
 
 """------------------------------- Main -----------------------------------"""
-def manual(args):
-	global clos
-	clos = float(args[1])
-	bench_file = wd_dir + args[2] + '.csv'
-	algo = args[3]
-	if algo == 'custom':
-		try:
-			real = args[4] == 'real'
-		except:
-			real = True
-		try:
-			classes = int(args[5])
-		except:
-			classes = 2
+algorithms = {'random': random_pairs, 'oracle': oracle, 'whisker': whisker, 'delphi': delphi, 'delphi2': delphi_2}
+
+def arg_check(args):
+	if (len(args) < 3) or (args[1] not in workload_files) or \
+	   (not all(map(lambda x: x in list(algorithms.keys()) + ['all'], args[2].split(',')))) or \
+	   ("delphi" in args[2] and len(args) < 5) or \
+	   ("delphi" in args[2] and args[3] not in ['r', 'p', 'a']) or \
+	   ("delphi" in args[2] and args[4] not in list(map(str, classes_))):
+		print(f"Usage:      {args[0]} <workload> <algorithm> <version> <classes>\n" + \
+			  f"Workload:   {' | '.join(workload_files)}\n" + \
+			  f"Algorithms: {' | '.join(list(algorithms.keys()) + ['all'])}\n" + \
+			  f"Version:    r (real) | p (predicted) | a (attackers)\n" + \
+			  f"Classes:    {' | '.join(map(str, classes_))}")
+		sys.exit(0)
+
+def pairs_run(args):
+	arg_check(args)
+	(workload, algorithm) = args[1:3]
+	(version, class_) = (args[3], int(args[4])) if len(args) == 5 else ('r', 2)
+	wd_file = open(workload_dir + workload + '.csv')
+	benchmarks = list(set([f"{i},{row[0]}-{row[1]},{row[2]}" for (i, row) in enumerate(csv.reader(wd_file, delimiter=','))]))
+	wd_file.close()
+	if algorithm == 'all':
+		for algo in algorithms:
+			violations = violations_counter(algorithms[algo](benchmarks, version, class_))
+			print(f"{algo}: {violations}")
 	else:
-		real = True
-		classes = 2
-	fd = open(bench_file)
-	reader = csv.reader(fd, delimiter=',')
-	benchmarks = [row[0] + '-' + row[1] for row in reader]
-	if len(benchmarks) % 2:
-		benchmarks.append(benchmarks[0])
-	pairs = decide_pairs(benchmarks, algo, real, classes)
-	fd.close()
-	print(report + ' ' + str(pairs))
-
-def loop(args):
-	global clos
-	clos = float(args[1])
-	files = list(filter(lambda x: x.endswith('csv'), os.listdir(wd_dir)))
-	workloads = set(map(lambda x: x.split('-')[0], files))
-	sizes = set(map(lambda x: x.split('-')[1].split('.')[0], files))
-	algorithms = ['oracle', 'whisker', 'random', 'attackers', 'forest',
-				  'custom_real_2', 'custom_real_3', 'custom_pred_2', 'custom_pred_3']
-	results = OrderedDict()
-	for size in sizes:
-		print("Size:", size)
-		results[size] = OrderedDict()
-		for _file in workloads:
-			results[size][_file] = OrderedDict()
-			print("\tWorkload:", _file)
-			bench_file = wd_dir + _file + '-' + size + '.csv'
-			bench_f = open(bench_file)
-			reader = csv.reader(bench_f, delimiter=',')
-			benchmarks = [row[0] + '-' + row[1] for row in reader]
-
-			for algo in algorithms:
-				if algo in ['oracle', 'forest', 'whisker']:
-					violations = [decide_pairs(benchmarks, algo)]
-				elif algo == 'random' or algo == 'attackers':
-					violations = []
-					for i in range(100):
-						violations.append(decide_pairs(benchmarks, algo))
-				elif algo.startswith('custom'):
-					violations = []
-					(algorithm, real, classes) = algo.split('_')
-					for i in range(100):
-						violations.append(decide_pairs(benchmarks, algorithm, real, int(classes)))
-				print("\t\tAlgorithm:", algo, np.mean(violations))
-				results[size][_file][algo] = np.mean(violations)
-			bench_f.close()
-	print_results(results)
+		violations = violations_counter(algorithms[algorithm](benchmarks, version, class_))
+		print(f"{report}Violations: {violations}")
 
 if __name__ == '__main__':
-	if len(sys.argv) < 2:
-		sys.exit(help_message(sys.argv[0]))
-	if sys.argv[1] == 'loop': loop(sys.argv[1:])
-	else: manual(sys.argv)
+	pairs_run(sys.argv)
