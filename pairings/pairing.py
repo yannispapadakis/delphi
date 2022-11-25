@@ -10,7 +10,7 @@ from matching import Player
 report = ''
 heatmap = spawn_heatmap()
 read_heatmap(heatmap)
-workload_files = list(map(lambda x: x.split('.')[0], filter(lambda x: x.endswith('csv'), os.listdir(workload_dir))))
+workload_files = list(filter(lambda x: x.endswith('csv'), os.listdir(workload_dir)))
 
 """--------------------------- Random Pairing -----------------------------"""
 def random_pairs(benchmarks, version, class_):
@@ -256,8 +256,8 @@ def pairs_run(args):
 	arg_check(args)
 	(workload, algorithm) = args[1:3]
 	(version, class_) = (args[3], int(args[4])) if len(args) == 5 else ('r', 2)
-	wd_file = open(workload_dir + workload + '.csv')
-	benchmarks = list(set([f"{i},{row[0]}-{row[1]},{row[2]}" for (i, row) in enumerate(csv.reader(wd_file, delimiter=','))]))
+	wd_file = open(workload_dir + workload)
+	benchmarks = list(set([f"{i},{row[0]},{row[1]}" for (i, row) in enumerate(csv.reader(wd_file, delimiter=','))]))
 	wd_file.close()
 	if algorithm == 'all':
 		for algo in algorithms:

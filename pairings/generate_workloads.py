@@ -1,22 +1,17 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import sys
 sys.path.append('../core/')
 from read_vm_output import *
 
-predictions_dir = results_dir + 'predictions/SVC/'
-
-def pred_file(mode, qos, classes):
-	return predictions_dir + mode + '_' + str(classes) + '_' + str(qos) + '_SVC.csv'
+def pred_file(feature, qos, classes):
+	return f"{predictions_dir}SVC/SVC_{feature}_{classes}_{qos}_sp_cv.csv"
 
 def benchmarks_list(qos, classes):
-	sens_file = open(pred_file('sens', qos, classes), 'r')
-	cont_file = open(pred_file('cont', qos, classes), 'r')
+	(sens_f, cont_f) = [open(pred_file(feature, qos, classes), 'r') for feature in features]
 
-	classes = dict((row[0], row[-1]) for row in csv.reader(sens_file, delimiter = '\t'))
-	classes.pop('Accuracy', None)
-	classes.pop('Bench', None)
-	for row in csv.reader(cont_file, delimiter = '\t'):
-		if row[0] == 'Bench' or row[0] == 'Accuracy': continue
+	classes = dict((row[0], row[-1]) for row in csv.reader(sens_f, delimiter = '\t') if row[0] != 'Bench')
+	for row in csv.reader(cont_f, delimiter = '\t'):
+		if row[0] == 'Bench': continue
 		classes[row[0]] = (int(classes[row[0]]), int(row[-1]))
 	groups = dict()
 	for (bench, class_) in classes.items():
@@ -27,69 +22,39 @@ def benchmarks_list(qos, classes):
 		else: groups[index] = [bench]
 	return groups
 
-def single_slo(qos, classes, contention, size):
-	groups = benchmarks_list(qos, classes)
+def generate_workload(contention, size, qos_in, classes):
+	qos = qos_levels if qos_in == 'all' else [float(qos_in)]
+	groups = dict((slo, benchmarks_list(slo, classes)) for slo in qos)
 	bench_list = []
-	if contention == 'low': cont = 0
-	if contention == 'med': cont = 1
-	if contention == 'high': cont = 2
+	(zeros, ones, twos) = (0, 0, 0)
+	cont = 2 * int(contention == "h") + int(contention == "m")
 	while len(bench_list) < size:
-		for c in groups:
-			bench_list.append(random.choice(groups[c]).replace('-',','))
-		bench_list.append(random.choice(groups[cont]).replace('-',','))
-	wl_file = open(workload_dir + contention + '-' + str(size) + '.csv', 'w')
-	for row in bench_list:
-		wl_file.write(row + '\n')
+		for c in [0, 1, 2, cont]:
+			qos_to_choose = list(filter(lambda x: c in groups[x], qos))
+			if not qos_to_choose:
+				print(f"No benchmarks with intensity: {c} for qos: {qos}")
+				return
+			slo = random.choice(qos_to_choose)
+			bench_list.append(f"{random.choice(groups[slo][c])},{slo}")
+	wl_file = open(f"{workload_dir}{contention}-{size}-{qos_in}.csv", 'w')
+	for row in bench_list: wl_file.write(row + '\n')
 	wl_file.close()
 
-def multiple_slos(classes, contention, size):
-	slos = sorted(map(lambda x: float(x.split('_')[2]), 
-				  filter(lambda x: x.startswith('sens_' + str(classes)),
-				  os.listdir(predictions_dir))))
-	groups = dict()
-	for qos in slos:
-		groups[qos] = benchmarks_list(qos, classes)
-	bench_list = []
-	zeros = ones = twos = 0
-	if contention == 'low': cont = 0
-	if contention == 'med': cont = 1
-	if contention == 'high': cont = 2
-	while len(bench_list) < size:
-		for c in [0, 1, 2]:
-			slo = random.choice(filter(lambda x: c in groups[x].keys(), slos))
-			bench_list.append(random.choice(groups[slo][c]).replace('-', ',') + ',' + str(slo))
-		slo = random.choice(filter(lambda x: c in groups[x].keys(), slos))
-		bench_list.append(random.choice(groups[slo][c]).replace('-', ',') + ',' + str(slo))
-	wl_file = open(workload_dir + contention + '-' + str(size) + '-multSLO.csv', 'w')
-	for row in bench_list:
-		wl_file.write(row + '\n')
-	wl_file.close()
-
-def help_message(ex):
-	msg =  "Usage:  %s <contention> <size> <slos> <classes>\n" % ex
-	msg += "contention: " + ' | '.join(['low', 'med', 'high']) + '\n'
-	msg += "size:       " + 'int\n'
-	msg += "slo:        " + ' | '.join(['float: single SLO', 'all: all SLOs']) + '\n'
-	msg += "classes:    " + ' | '.join(["2", "3"])
-	print(msg)
+def arg_check(args):
+	contentions = ['l', 'm', 'h']
+	if len(args) < 5 or \
+	   args[1] not in contentions or \
+	   not all([x.isdigit() for x in args[2]]) or \
+	   args[3] not in list(map(str, qos_levels)) + ['all'] or \
+	   args[4] not in list(map(str, classes_)):
+		print(f"Usage:      {args[0]} <contention> <size> <slos> <classes>\n" + \
+			  f"Contention: {' | '.join(contentions)}\n" + \
+			  f"Size:       int\n" + \
+			  f"SLO:        {' | '.join(list(map(str, qos_levels)) + ['all'])}\n" + \
+			  f"Classes:    {' | '.join(map(str, classes_))}")
+		sys.exit(1)
 
 if __name__ == '__main__':
-	if len(sys.argv) < 3:
-		sys.exit(help_message(sys.argv[0]))
-	contention = sys.argv[1]
-	try:
-		size = int(sys.argv[2])
-	except:
-		size = 100
-	try:
-		classes = int(sys.argv[4])
-	except:
-		classes = 2
-	try:
-		qos = sys.argv[3]
-		if qos == "all":
-			multiple_slos(classes, contention, size)
-		elif float(qos) in [1.1, 1.2, 1.3]:
-			single_slo(float(qos), classes, contention, size)
-	except:
-		multiple_slos(classes, contention, size)
+	arg_check(sys.argv)
+	(contention, size, qos, classes) = sys.argv[1:]
+	generate_workload(contention, int(size), qos, int(classes))

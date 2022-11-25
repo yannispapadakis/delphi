@@ -111,15 +111,15 @@ def kill_parsec(host):
 	for p in pids:
 		os.system("ssh " + host + " 'kill -15 " + p + "'")
 
-def kill_tailbench():
-	ssh_command = "ssh client 'ps -ef | grep client_run'" 
+def kill_tailbench(client):
+	ssh_command = "ssh " + client + " 'ps -ef | grep client_run'"
 	pids = subprocess.check_output(ssh_command, shell = True)
 	pids = map(lambda z: z[1], filter(lambda y: len(y) > 8 and "./client_run.sh" == y[8], map(lambda x: x.split(), pids.split("\n"))))
 	for pid in pids:
 		try:
-			child_pid = subprocess.check_output("ssh client 'pgrep -P " + pid + "'", shell = True)
+			child_pid = subprocess.check_output("ssh " + client + " 'pgrep -P " + pid + "'", shell = True)
 		except: continue
-		os.system("ssh client 'kill -15 " + child_pid + "'")
+		os.system("ssh " + client + " 'kill -15 " + child_pid + "'")
 
 def verify_empty_host(host):
 	pids = ssh_command_pid(host)
@@ -128,8 +128,6 @@ def verify_empty_host(host):
 		kill_spec(host)
 		kill_parsec(host)
 		kill_tailbench()
-		for pid in pids:
-			os.system("kill -15 " + pid + " >/dev/null 2>&1")
 		pids = ssh_command_pid(host)
 
 def run_benchmarks(benchmarks, port):
@@ -142,14 +140,15 @@ def run_benchmarks(benchmarks, port):
 		hosts[i] = host
 		verify_empty_host(host)
 		if "tailbench" in benchmark['bench'][0]:
-			verify_empty_host("client")
+			client_vm = "client-" + str(i + 1)
+			verify_empty_host(client_vm)
 			server, client = commands.split(sc_split)
-			hosts[len(benchmarks)] = "client"
+			hosts[len(benchmarks) + i] = client_vm
 			ssh_server = "ssh " + host + " \'" + server + "\' &"
-			ssh_client = "ssh client \'" + client + "\' &"
+			ssh_client = "ssh " + client_vm + " \'" + client + "\' &"
 			os.system(ssh_server)
 			os.system(ssh_client)
-			pids["client"] = (i, ssh_command_pid("client"))
+			pids[client_vm] = (i, ssh_command_pid(client_vm))
 		else:
 			ssh_command = "ssh " + host + " \'" + commands + "\' &"
 			os.system(ssh_command)
@@ -162,12 +161,14 @@ def run_benchmarks(benchmarks, port):
 		extra_command = get_vm_commands(finished, benchmarks[finished], port, vm_ips[host], True)
 		if "tailbench" in benchmarks[finished]['bench'][0]:
 			extra_command, client = extra_command.split(sc_split)
-			ssh_client = "ssh client \'" + client + "\' &"
+			client_vm = hosts[len(benchmarks) + finished]
+			ssh_client = "ssh " + client_vm + " \'" + client + "\' &"
 		ssh_command = "ssh " + host + " \'" + extra_command + "\' &"
 		os.system(ssh_command)
 		if "tailbench" in benchmarks[finished]['bench'][0]:
 			os.system(ssh_client)
-			pids["client"] = (finished, ssh_command_pid("client"))
+			client_vm = hosts[len(benchmarks) + finished]
+			pids[client_vm] = (finished, ssh_command_pid(client_vm))
 		else:
 			pids[host] = (finished, ssh_command_pid(host))
 
@@ -179,7 +180,7 @@ def run_benchmarks(benchmarks, port):
 				os.system(ssh_command)
 				if "tailbench" in benchmarks[finished]['bench'][0]:
 					os.system(ssh_client)
-					pids["client"] = (finished, ssh_command_pid("client"))
+					pids[client_vm] = (finished, ssh_command_pid(client_vm))
 				else:
 					pids[host] = (finished, ssh_command_pid(host))
 			else:
@@ -188,7 +189,7 @@ def run_benchmarks(benchmarks, port):
 				elif "parsec" in benchmarks[finished]['bench'][0]:
 					kill_parsec(hosts[finished])
 				elif "tailbench" in benchmarks[finished]['bench'][0]:
-					kill_tailbench()
+					kill_tailbench(hosts[len(benchmarks) + finished])
 				break
 	logger.info("Both VMs finished")
 
