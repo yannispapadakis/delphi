@@ -57,6 +57,7 @@ run_coexecution()
 
 specs="astar,bzip2,bwaves,cactusADM,calculix,dealII,gamess,gcc,GemsFDTD,gobmk,gromacs,h264ref,hmmer,lbm,leslie3d,libquantum,mcf,milc,namd,omnetpp,perlbench,povray,sjeng,soplex,sphinx3,tonto,xalancbmk,zeusmp"
 parsecs="blackscholes,bodytrack,canneal,dedup,facesim,ferret,fluidanimate,freqmine,streamcluster,swaptions,vips,x264"
+specparsec="$specs","$parsecs"
 tails="img-dnn,masstree,moses,shore,silo,tailbench.sphinx"
 
 benchmarks()
@@ -68,6 +69,8 @@ benchmarks()
 		benches=$parsecs
 	elif [ "$bench_str" = "tail" ]; then
 		benches=$tails
+	elif [ "$bench_str" = "specparsec" ]; then
+		benches=$specparsec
 	fi
 }
 
