@@ -36,7 +36,8 @@ def generate_workload(contention, size, qos_in, classes):
 				return
 			slo = random.choice(qos_to_choose)
 			bench_list.append(f"{random.choice(groups[slo][c])},{slo}")
-	wl_file = open(f"{workload_dir}{contention}-{size}-{qos_in}.csv", 'w')
+	cont = {'l': 'low', 'm': 'med', 'h': 'high'}
+	wl_file = open(f"{workload_dir}{cont[contention]}-{size}-{qos_in}.csv", 'w')
 	for row in bench_list: wl_file.write(row + '\n')
 	wl_file.close()
 
