@@ -230,7 +230,7 @@ def grid_run(model_str, search_space, mismatch, feature, class_num, qos, train, 
 	for grid_point in list(product(*search_space)):
 		if mismatch(grid_point): continue
 		model = model_library(model_str, grid_point)
-		runs = [prediction(['cv', feature, qos, class_num, model, train]) for i in range(10)]
+		runs = [prediction(['cv', feature, qos, class_num, model, train, '']) for i in range(10)]
 		(acc, answers) = (np.mean(list(map(lambda x: x[0], runs))), max(runs, key = lambda x: x[0])[1])
 		max_acc = writer([model_str] + list(grid_point) + [acc], answers, max_acc, fd)
 	print('')
@@ -261,12 +261,12 @@ def grid_search(args):
 	fd_det.close()
 
 def help_message(args):
-	print("Usage:   %s <models> <qos> <feature> <class_num>\n" % args[0] + \
-		  "Models:  " + ' | '.join(models + ['all']) + '\n' + \
-		  "QoS:     " + ' | '.join(list(map(str, qos_levels))) + '\n' + \
-		  "Feature: " + ' | '.join(features) + '\n' + \
-		  "Classes: " + ' | '.join(list(map(str, classes_))) + '\n' + \
-		  "Train:   " + ' | '.join(list(benchmark_suites.keys())))
+	print(f"Usage:   {args[0]} <models> <qos> <feature> <class_num>\n" + \
+		  f"Models:  {' | '.join(models + ['all'])}\n" + \
+		  f"QoS:     {' | '.join(list(map(str, qos_levels)))}\n" + \
+		  f"Feature: {' | '.join(features)}\n" + \
+		  f"Classes: {' | '.join(list(map(str, classes_)))}\n" + \
+		  f"Train:   {' | '.join(list(benchmark_suites.keys()))} (comma separated)")
 	return 0
 
 if __name__ == '__main__':

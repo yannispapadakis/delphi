@@ -3,7 +3,8 @@ from sklearn.linear_model import LogisticRegression, SGDClassifier, PassiveAggre
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from sklearn.svm import SVC, NuSVC, LinearSVC
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier, RadiusNeighborsClassifier, NearestCentroid
+from sklearn.neighbors import KNeighborsClassifier, RadiusNeighborsClassifier, NearestCentroid, NeighborhoodComponentsAnalysis
+from sklearn.pipeline import Pipeline
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from sklearn.experimental import enable_hist_gradient_boosting
@@ -11,7 +12,6 @@ from sklearn.ensemble import RandomForestClassifier, BaggingClassifier, ExtraTre
 from sklearn.neural_network import MLPClassifier
 
 import pandas as pd
-from itertools import product
 from heatmap import *
 
 def model_library(model_str, gp):

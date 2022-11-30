@@ -1,6 +1,7 @@
 import sys, time, math, datetime, signal, calendar, logging, subprocess, os, random, re, json, csv, pprint, math
 import numpy as np
 from scipy.stats.mstats import gmean
+from itertools import product
 from operator import add, itemgetter
 from collections import OrderedDict
 from vm_messages_monitor import *
