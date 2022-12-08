@@ -95,8 +95,10 @@ def get_model(feature, classes, qos):
 		accuracy[model] = sum(predictions) / float(len(predictions))
 		model_pred.close()
 	model = max(accuracy.items(), key = itemgetter(1))[0]
-	global report
-	report += f"{feature} ({qos}): {model} | "
+	#print(f"get_model called with: {feature} {classes} {qos} => {model}")
+	#global report
+	#if f"{feature} ({qos}): {model} | " not in report: report += f"{feature} ({qos}): {model} | "
+	#report = f"{feature} {qos} {classes} | {report}"
 	return f"{predictions_dir}{model}/{model}_{feature}_{classes}_{qos}_{run}.csv"
 
 def delphi(benchmarks, version, classes):
@@ -109,10 +111,10 @@ def delphi(benchmarks, version, classes):
 			pairs.append((b1, b2))
 		return (pairs, list2)
 
-	def zipthem(zeros, notzeros):
-		zeros1 = zeros[:len(notzeros)]
-		zeros2 = zeros[len(notzeros):]
-		return list(zip(zeros1, notzeros)) + list(zip(zeros2[:int(len(zeros2) / 2)], zeros2[int(len(zeros2) / 2):]))
+	def safe_pairs(quiets, not_quiets):
+		quiets1 = quiets[:len(not_quiets)]
+		quiets2 = quiets[len(not_quiets):]
+		return list(zip(quiets1, not_quiets)) + list(zip(quiets2[:int(len(quiets2) / 2)], quiets2[int(len(quiets2) / 2):]))
 
 	def get_predictions(benchmarks, version, classes):
 		predictions = dict()
@@ -141,33 +143,69 @@ def delphi(benchmarks, version, classes):
 			pairs += new_pairs
 			if len(zeros) >= len(notzeros):
 				break
-	pairs += zipthem(zeros, notzeros)
+	pairs += safe_pairs(zeros, notzeros)
 	return list(map(lambda x: [name_fix(x[0][0]), name_fix(x[1][0])], pairs))
 
-"""---------------------- delphi Pairing Algorithm - mult SLOs ------------"""
-def delphi_2(benchmarks, version, classes):
-	def get_predictions(benchmarks, version, classes):
-		predictions = dict()
-		slos = sorted(list(set(map(float, map(lambda x: x.split(',')[2], benchmarks)))))
-		for s in slos:
-			predictions[s] = dict()
-			for f in features:
-				pred_f = open(get_model(f, classes, s), mode = 'r')
-				predictions[s][f] = dict((rows[0], int(rows[1 + int(version == 'r')])) for rows in csv.reader(pred_f, delimiter='\t') if rows[0] != 'Bench')
-				pred_f.close()
-		return dict((f"{i},{name},{slo}", 
-					{'slo': float(slo),
-					 'sens': predictions[float(slo)]['sens'][name],
-					 'cont': dict((i, predictions[i]['cont'][name]) for i in slos)}) \
-					for (i, name, slo) in map(lambda x: x.split(','), benchmarks))
+"""---------------------- delphi3 Pairing Algorithm - mult SLOs -----------"""
+def delphi3(benchmarks, version, classes):
+	def bad_pairing(combinations, not_quiets, num_quiets, qos):
+		pairs = []
+		for combination in combinations:
+			apps_to_remove = list(filter(lambda x: x[1] == combination, not_quiets))
+			while len(apps_to_remove) > 1:
+				random.shuffle(apps_to_remove)
+				(pair_1, pair_2) = (apps_to_remove.pop(0), apps_to_remove.pop(0))
+				not_quiets.remove(pair_1)
+				not_quiets.remove(pair_2)
+				pairs.append((pair_1[0], pair_2[0]))
+				if len(not_quiets) <= num_quiets: return pairs
+		return pairs
 
+	def safe_pairs(quiets, not_quiets):
+		quiets1 = list(map(lambda x: x[0], quiets[:len(not_quiets)]))
+		quiets2 = list(map(lambda x: x[0], quiets[len(not_quiets):]))
+		not_quiets = list(map(lambda x: x[0], not_quiets))
+		return list(zip(quiets1, not_quiets)) + list(zip(quiets2[:int(len(quiets2) / 2)], quiets2[int(len(quiets2) / 2):]))
+
+	predictions = get_predictions(benchmarks, version, classes)
+	slos = sorted(set(map(lambda x: x['slo'], predictions.values())))
+	order = [(1,0), (0,1), (2,0), (0,2), (2,2), (2,1), (1,2), (1,1)]
+	(not_quiets, pairs) = ([],[])
+	for (i, qos) in enumerate(slos):
+		quiets = list(filter(lambda x: not any([x[0] in y for y in pairs]),
+				 list(map(lambda y: (y[0], (y[1]['sens'], y[1]['cont'][qos])), filter(lambda x: x[1]['sens'] + x[1]['cont'][qos] == 0, list(predictions.items()))))))
+		not_quiets = list(filter(lambda x: not any([x[0] in y for y in pairs]),
+					 list(map(lambda y: (y[0], (y[1]['sens'], y[1]['cont'][qos])), filter(lambda x: x[1]['sens'] + x[1]['cont'][qos] > 0, list(predictions.items()))))))
+
+		if len(quiets) < len(not_quiets):
+			pairs += bad_pairing(order if i + 1 == len(slos) else order[:4], not_quiets, len(quiets), qos)
+	pairs += safe_pairs(quiets, not_quiets)
+	return list(map(lambda x: map(name_fix, x), pairs))
+
+"""---------------------- delphi Pairing Algorithm - mult SLOs ------------"""
+def get_predictions(benchmarks, version, classes):
+	predictions = dict()
+	slos = sorted(list(set(map(float, map(lambda x: x.split(',')[2], benchmarks)))))
+	for s in slos:
+		predictions[s] = dict()
+		for f in features:
+			pred_f = open(get_model(f, classes, s), mode = 'r')
+			predictions[s][f] = dict((rows[0], int(rows[1 + int(version == 'r')])) for rows in csv.reader(pred_f, delimiter='\t') if rows[0] != 'Bench')
+			pred_f.close()
+	return dict((f"{i},{name},{slo}", 
+				{'slo': float(slo),
+				 'sens': predictions[float(slo)]['sens'][name],
+				 'cont': dict((i, predictions[i]['cont'][name]) for i in slos)}) \
+				for (i, name, slo) in map(lambda x: x.split(','), benchmarks))
+
+def delphi_2(benchmarks, version, classes):
 	def exhaustive_matrix(preds):
 		benchmarks = list(preds.keys())
 		for row in preds:
 			preds[row]['heatmap'] = dict()
 			for col in set(benchmarks).difference([row]):
-				deny = (preds[row]['sens'] and preds[col]['cont'][preds[row]['slo']]) or \
-					   (preds[col]['sens'] and preds[row]['cont'][preds[col]['slo']])
+				deny = int(bool(preds[row]['sens'] and preds[col]['cont'][preds[row]['slo']])) or \
+					   int(bool(preds[col]['sens'] and preds[row]['cont'][preds[col]['slo']]))
 				preds[row]['heatmap'][col] = ((preds[row]['sens'], preds[col]['cont'][preds[row]['slo']]), deny)
 
 	def sort_benchmarks(preds):
@@ -182,6 +220,7 @@ def delphi_2(benchmarks, version, classes):
 		for (i, bench) in enumerate(queue):
 			candidate_list = list(map(lambda x:x[0], filter(lambda y: y[1][1] == 0, bench[1]['heatmap'].items())))
 			total_cand_list = list(set(total_cand_list + candidate_list).difference([bench[0]]))
+			#if len(total_cand_list) == (i + 1): print(f"{i+1} : {len(total_cand_list)} | {bench[0].split(',')[0]}: {len(candidate_list)} | {list(map(lambda x: int(x.split(',')[0]), candidate_list))}")
 			if len(total_cand_list) < (i + 1): return i
 		return -1
 
@@ -189,9 +228,10 @@ def delphi_2(benchmarks, version, classes):
 		pairs = []
 		error_index = wont_find_candidate(queue)
 		while error_index > -1:
-			error_bench = queue.pop(error_index)
+			#error_bench = queue.pop(error_index)
+			error_bench = queue.pop(0)
 			bench_to_pair = queue.pop(0)
-			#print(f"BENCH: {error_bench[0]} (idx: {error_index}) will be badly paired with: {bench_to_pair[0]}")
+			#print(f"BENCH: {error_bench[0]} (idx: {error_index}) will be badly paired with: {bench_to_pair[0]}\n{'-'*50}")
 			pairs.append((error_bench[0], bench_to_pair[0]))
 			error_index = wont_find_candidate(queue)
 		return (pairs, queue)
@@ -199,7 +239,7 @@ def delphi_2(benchmarks, version, classes):
 	preds = get_predictions(benchmarks, version, classes)
 	exhaustive_matrix(preds)
 	queue = sort_benchmarks(preds)
-	#for x in queue: print(f"{x[0]}{' '*(20 - len(x[0]))}{x[1]['slo']}{' '*4}{x[1]['sens']}{' '*4}{x[1]['cont']}{' '*4}{sum(map(lambda y: y[1], x[1]['heatmap'].values()))}")
+	#for x in queue: print(f"{x[0]}{' '*(25 - len(x[0]))}{x[1]['slo']}{' '*4}{x[1]['sens']}{' '*4}{x[1]['cont']}{' '*4}{sum(map(lambda y: y[1], x[1]['heatmap'].values()))} {len(x[1]['heatmap'])}")
 	pairs = []
 	(pairs, queue) = bad_pairing(queue)
 	scrap = []
@@ -223,6 +263,7 @@ def delphi_2(benchmarks, version, classes):
 """------------------------- Helper Functions -----------------------------"""
 def violations_counter(pairs):
 	violations = 0
+	if type(pairs) != list: return -1
 	for (bench1, bench2) in pairs:
 		(name1, name2) = (bench1[1], bench2[1])
 		try: sd1 = heatmap[name1][name2]
@@ -237,34 +278,51 @@ def name_fix(name):
 	return (int(tokens[0]), tokens[1], float(tokens[2]))
 
 """------------------------------- Main -----------------------------------"""
-algorithms = {'random': random_pairs, 'oracle': oracle, 'whisker': whisker, 'delphi': delphi, 'delphi2': delphi_2}
+algorithms = {'random': random_pairs, 'oracle': oracle, 'whisker': whisker, 'delphi': delphi, 'delphi2': delphi_2, 'delphi3': delphi3}
+alg_config = {'random':  [100, ['r'],      [2]],
+			  'oracle':  [1,   ['r'], [2]],
+			  'whisker': [1,   ['r'],      [2]],
+			  'delphi':  [100, ['r', 'p'], [2, 3]],
+			  'delphi2': [1,   ['r', 'p'], [2, 3]],
+			  'delphi3': [100, ['r', 'p'], [2, 3]]}
 
 def arg_check(args):
-	if (len(args) < 3) or (args[1] not in workload_files) or \
-	   (not all(map(lambda x: x in list(algorithms.keys()) + ['all'], args[2].split(',')))) or \
-	   ("delphi" in args[2] and len(args) < 5) or \
-	   ("delphi" in args[2] and args[3] not in ['r', 'p', 'a']) or \
-	   ("delphi" in args[2] and args[4] not in list(map(str, classes_))):
-		print(f"Usage:      {args[0]} <workload> <algorithm> <version> <classes>\n" + \
-			  f"Workload:   {' | '.join(workload_files)}\n" + \
+	if (len(args) < 2) or \
+	   (not all(map(lambda x: x in list(algorithms.keys()) + ['all'], args[1].split(',')))) or \
+	   (len(args) > 2 and args[2] not in workload_files):
+		print(f"Usage:      {args[0]} <algorithm> <workload> <version> <classes>\n" + \
 			  f"Algorithms: {' | '.join(list(algorithms.keys()) + ['all'])}\n" + \
+			  f"Workload:   {' | '.join(workload_files)}\n" + \
 			  f"Version:    r (real) | p (predicted) | a (attackers)\n" + \
 			  f"Classes:    {' | '.join(map(str, classes_))}")
 		sys.exit(0)
 
 def pairs_run(args):
 	arg_check(args)
-	(workload, algorithm) = args[1:3]
-	(version, class_) = (args[3], int(args[4])) if len(args) == 5 else ('r', 2)
-	wd_file = open(workload_dir + workload)
-	benchmarks = list(set([f"{i},{row[0]},{row[1]}" for (i, row) in enumerate(csv.reader(wd_file, delimiter=','))]))
-	wd_file.close()
-	if algorithm == 'all':
-		for algo in algorithms:
-			violations = violations_counter(algorithms[algo](benchmarks, version, class_))
-			print(f"{algo}: {violations}")
-	else:
-		violations = violations_counter(algorithms[algorithm](benchmarks, version, class_))
+	if len(args) < 3:
+		algorithms_to_run = algorithms if args[1] == 'all' else args[1].split(',')
+		for workload in os.listdir(workload_dir):
+			global report
+			wd_file = open(workload_dir + workload)
+			benchmarks = list(set([f"{i},{row[0]},{row[1]}" for (i, row) in enumerate(csv.reader(wd_file, delimiter=','))]))
+			wd_file.close()
+			print(f"{'-'*40} {workload} {'-'*(50 - len(workload))}")
+			results = dict()
+			for algo in algorithms_to_run:
+				(runs, versions, classes) = alg_config[algo]
+				configs = list(product(*[versions, classes]))
+				for (version, class_) in configs:
+					violations = np.mean([violations_counter(algorithms[algo](benchmarks, version, class_)) for i in range(runs)])
+					results[(algo, version, class_)] = violations
+					conf_str = (f" {version} - {class_}" if len(configs) > 1 else "")
+					print(f"{algo}{conf_str}: {report}{violations}")
+			report = ''
+	elif len(args) == 5:
+		(workload, version, class_) = (args[2], args[3], int(args[4])) if len(args) == 5 else (args[2], 'r', 2)
+		wd_file = open(workload_dir + workload)
+		benchmarks = list(set([f"{i},{row[0]},{row[1]}" for (i, row) in enumerate(csv.reader(wd_file, delimiter=','))]))
+		wd_file.close()
+		violations = violations_counter(algorithms[args[1]](benchmarks, version, class_))
 		print(f"{report}Violations: {violations}")
 
 if __name__ == '__main__':

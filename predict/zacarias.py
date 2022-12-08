@@ -1,35 +1,33 @@
+#!/usr/bin/python3
 from sklearn.ensemble import RandomForestRegressor 
 import pandas as pd
 from heatmap import *
 
+temp_dir = '/home/ypap/temp/'
+
 def pair_perf(measures):
+	benchmarks = list(filter(lambda x: x != 'Title', list(measures.keys())))
 	pair_measures = []
+	heatmap = spawn_heatmap(benchmarks)
+	read_heatmap(heatmap)
 
-	grid = generate_grid()
-	read_grid(grid)
-
-	for bench1 in grid:
+	for bench1 in heatmap:
 		perf1 = measures[bench1]
-		for bench2 in grid[bench1]:
+		for bench2 in heatmap[bench1]:
 			perf2 = measures[bench2]
-			pair = perf1[0] + '_' + perf2[0]
-			perfs = perf1[1:] + perf2[1:]
-			sd = grid[bench1][bench2]
-			row = [pair] + perfs + [sd]
-			pair_measures.append(row)
+			pair_measures.append([f"{perf1[0]}_{perf2[0]}"] + perf1[1:] + perf2[1:] + [heatmap[bench1][bench2]])
 	return pair_measures
 
 def csv_writer(pair_measures, train_set, test_set, title):
-	train_file = csv_dir + 'train.csv'
+	train_file = temp_dir + 'train.csv'
 	train_fd = open(train_file, mode = 'w')
 	train = csv.writer(train_fd, delimiter = ',')
-	test_file = csv_dir + 'test.csv'
+	test_file = temp_dir + 'test.csv'
 	test_fd = open(test_file, mode = 'w')
 	test = csv.writer(test_fd, delimiter = ',')
 	
 	train.writerow(title)
 	test.writerow(title)
-
 	for row in pair_measures:
 		(b1, b2) = row[0].split('_')
 		if b1 in train_set and b2 in train_set:
@@ -40,19 +38,19 @@ def csv_writer(pair_measures, train_set, test_set, title):
 	train_fd.close()
 	test_fd.close()
 
-def predicted_grid(answers):
-	grid = generate_grid()
+def predicted_heatmap(answers):
+	heatmap = spawn_heatmap()
 	for pair in answers:
 		(bench1, bench2) = pair.split('_')
-		grid[bench1][bench2] = answers[pair][0]
-	return grid
+		heatmap[bench1][bench2] = answers[pair][0]
+	clean_heatmap(heatmap)
+	return heatmap
 
 def random_forest(answers):
-	train_data = pd.read_csv(csv_dir + 'train.csv')
-	test_data = pd.read_csv(csv_dir + 'test.csv')
+	train_data = pd.read_csv(temp_dir + 'train.csv')
+	test_data = pd.read_csv(temp_dir + 'test.csv')
 	
-	#remove_cols = [0,8,10,13,21,23,26,27] # Benchmark, IPC (perf), IPC (pqos), LLC Misses, Slowdown
-	remove_cols = [0, 8, 16, 17] # Benchmark, IPC (1), IPC (2), Slowdown
+	remove_cols = [0, 18] # Benchmark, Slowdown
 	train = train_data.drop(train_data.columns[remove_cols], axis = 1)
 	test = test_data.drop(test_data.columns[remove_cols], axis = 1)
 
@@ -63,10 +61,9 @@ def random_forest(answers):
 
 	# Random Forest Model. min_samples_split = 2, bootstrap = True (by default)
 	model = RandomForestRegressor(max_features = 'sqrt', n_estimators = 22)
-	try:
-		model.fit(train, y_train)
+	try: model.fit(train, y_train)
 	except:
-		print "RandomForest Error"
+		print("RandomForest Error")
 		return False
 	test_pred = model.predict(test)
 	r2 = model.score(test, y_test) # return the coefficient of determination R^2 of the prediction
@@ -77,7 +74,7 @@ def random_forest(answers):
 
 def predict(fold = 5):
 	measures = perf_files('perf-sp')
-	benchmarks = [x for x in measures.keys() if x != 'Title']
+	benchmarks = list(filter(lambda x: x != 'Title', list(measures.keys())))
 	chunksize = int(np.ceil(len(benchmarks) / float(fold)))
 	random.shuffle(benchmarks)
 	chunks = [benchmarks[i:i + chunksize] for i in range(0, len(benchmarks), chunksize)]
@@ -87,39 +84,37 @@ def predict(fold = 5):
 	pair_measures = pair_perf(measures)
 	for test_set in chunks:
 		train_chunks = [x for x in chunks if x != test_set]
-		train_set = [element for lst in train_chunks for element in lst]
+		train_set = [bench for chunk in train_chunks for bench in chunk]
 		csv_writer(pair_measures, train_set, test_set, measures['Title'])
 		r2.append(random_forest(answers))
 
-	os.remove(csv_dir + 'train.csv')
-	os.remove(csv_dir + 'test.csv')
+	os.remove(temp_dir + 'train.csv')
+	os.remove(temp_dir + 'test.csv')
 	
-	pred_grid = predicted_grid(answers)
+	pred_heatmap = predicted_heatmap(answers)
 	print_ans(answers, r2)
-	print_grid(pred_grid, name = 'pred_grid')
+	print_heatmap(pred_heatmap, name = 'pred_heatmap')
 
 def print_ans(answers, r2):
-	fd = open(csv_dir + 'random_forest.csv', 'w')
-	wr = csv.writer(fd, delimiter = ',')
-	diff = []
-	for x in answers:
-		diff.append(abs(answers[x][1] - answers[x][0]))
-		wr.writerow(answers[x])
-	fd.close()
+	#fd = open(temp_dir + 'random_forest.csv', 'w')
+	#wr = csv.writer(fd, delimiter = ',')
+	#for x in answers: wr.writerow(answers[x])
+	#fd.close()
+	diff = [abs(answers[x][1] - answers[x][0]) for x in answers]
 	q1 = np.percentile(diff, 25)
 	q3 = np.percentile(diff, 75)
 	lower_whisker = min([x for x in diff if x >= q1 - 1.5 * (q3 - q1)])
 	upper_whisker = max([x for x in diff if x <= q3 + 1.5 * (q3 - q1)])
-	print "Average:    ", np.mean(diff)
-	print "Min:        ", min(diff)
-	print "L. Whisker: ", lower_whisker
-	print "Quartile 1: ", q1
-	print "Median:     ", np.percentile(diff, 50)
-	print "Quartile 3: ", q3
-	print "U. Whisker: ", upper_whisker
-	print "Max:        ", max(diff)
-	print "R2 Scores:"
-	pprint.pprint(r2)
+	report = f"Average:  {np.mean(diff):.4f}\n" + \
+			 f"Min:      {min(diff):.4f}\n" + \
+			 f"L. Fence: {lower_whisker:.4f}\n" + \
+			 f"Quart. 1: {q1:.4f}\n" + \
+			 f"Median:   {np.percentile(diff, 50):.4f}\n" + \
+			 f"Quart. 3: {q3:.4f}\n" + \
+			 f"U. Fence: {upper_whisker:.4f}\n" + \
+			 f"Max:      {max(diff):.4f}\n" + \
+			 f"R^2:      {' | '.join(map(str, r2))}"
+	print(report)
 
 if __name__ == '__main__':
 	predict()

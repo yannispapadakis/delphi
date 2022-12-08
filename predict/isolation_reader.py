@@ -26,7 +26,7 @@ def read_pqos_files(pqos_file, run_periods):
 
 ########################################## Perf Parser ############################################
 
-def read_perf_file(filename, directory, run_periods):
+def read_perf_file(filename, directory, run_periods, version = ''):
 	measures = OrderedDict()
 	with open(directory + filename) as perf_f:
 		name = filename.split('.')[1]
@@ -47,9 +47,10 @@ def read_perf_file(filename, directory, run_periods):
 				line = perf_f.readline()
 				continue
 			time = int(tokens[0].split('.')[0]) + start_t
-			if time < run_periods[0] or time > run_periods[1]:
-				line = perf_f.readline()
-				continue
+			if run_periods:
+				if time < run_periods[0] or time > run_periods[1]:
+					line = perf_f.readline()
+					continue
 			event = tokens[2]
 			value = int(tokens[1])
 			if event in measures:
@@ -58,7 +59,7 @@ def read_perf_file(filename, directory, run_periods):
 				measures[event] = [value]
 			line = perf_f.readline()
 		perf_f.close()
-	if 'instructions' in measures and 'cycles' in measures:
+	if 'instructions' in measures and 'cycles' in measures and version == '':
 		measures['ipc_perf'] = map(lambda x: float(x[0]) / x[1] if x[1] > 0 else 0, 
 							  list(zip(measures['instructions'], measures['cycles'])))
 		measures.pop('cycles')
@@ -168,10 +169,11 @@ def perf_files(tool = 'pqos'):
 		if len(files) == len(list(cached_measures.keys())): return cached_measures
 		else:
 			final_title = []
-			run_periods = time_cleanup('perf')
+			run_periods = time_cleanup(tool + ('' if version == '' else '-' + version))
 			for f in list(filter(lambda x: x.endswith('csv'), files)):
 				if f.split('.')[1] in excluded_benchmarks: continue
-				measures = read_perf_file(f, directory, run_periods[f.split('.')[1]])
+				period = run_periods[f.split('.')[1]] if f.split('.')[1] in run_periods else []
+				measures = read_perf_file(f, directory, period, version)
 				if final_title == []: final_title = measures.keys()
 				elif final_title != measures.keys(): print("Title error on:", f)
 				name = f.split('.csv')[0] if 'sphinx-' in f else f.split('.')[1]
@@ -188,7 +190,6 @@ def perf_files(tool = 'pqos'):
 			elif version == 'sp':
 				apply_mean(all_measures)
 				for bench in all_measures:
-					all_measures[bench].pop('instructions')
 					final_title = list(all_measures[bench].keys())
 					all_measures[bench] = [bench] + list(all_measures[bench].values())
 				all_measures['Title'] = ['Benchmark'] + final_title + final_title + ['Slowdown']
@@ -196,7 +197,8 @@ def perf_files(tool = 'pqos'):
 
 def time_cleanup(tool = 'perf'):
 	directory = isolation_dir + tool + '/outputs/'
-	total_measures = parse_files(directory)
+	try: total_measures = parse_files(directory)
+	except: return dict()
 	run_periods = dict()
 	for f in total_measures:
 		bench_name = f.replace('img-dnn', 'imgdnn').split('-')[0].replace('_','-').replace('imgdnn', 'img-dnn')
