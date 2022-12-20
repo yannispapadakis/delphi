@@ -4,14 +4,14 @@ sys.path.append('../core/')
 from read_vm_output import *
 
 def pred_file(feature, qos, classes):
-	return f"{predictions_dir}SVC/SVC_{feature}_{classes}_{qos}_sp_cv.csv"
+	return f"{predictions_dir}SVC/SVC_{feature}_{classes}_{qos}_spt_cv.csv"
 
 def benchmarks_list(qos, classes):
 	(sens_f, cont_f) = [open(pred_file(feature, qos, classes), 'r') for feature in features]
 
-	classes = dict((row[0], row[-1]) for row in csv.reader(sens_f, delimiter = '\t') if row[0] != 'Bench')
+	classes = dict((row[0], row[-1]) for row in csv.reader(sens_f, delimiter = '\t') if row[0] != 'Bench' and row[0] != 'Accuracy')
 	for row in csv.reader(cont_f, delimiter = '\t'):
-		if row[0] == 'Bench': continue
+		if row[0] == 'Bench' or row[0] == 'Accuracy': continue
 		classes[row[0]] = (int(classes[row[0]]), int(row[-1]))
 	groups = dict()
 	for (bench, class_) in classes.items():

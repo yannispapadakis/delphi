@@ -86,9 +86,9 @@ def players_to_str(holds):
 
 """---------------------- delphi Pairing Algorithm ------------------------"""
 def get_model(feature, classes, qos):
-	run = "sp_cv"
+	run = "spt_cv"
 	accuracy = dict()
-	for model in models:
+	for model in chosen_models:
 		try: model_pred = open(f"{predictions_dir}{model}/{model}_{feature}_{classes}_{qos}_{run}.csv", 'r')
 		except: continue
 		predictions = [int(line[1] == line[2]) for line in csv.reader(model_pred, delimiter='\t') if line[0] != 'Bench']

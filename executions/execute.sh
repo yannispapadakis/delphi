@@ -59,6 +59,7 @@ specs="astar,bzip2,bwaves,cactusADM,calculix,dealII,gamess,gcc,GemsFDTD,gobmk,gr
 parsecs="blackscholes,bodytrack,canneal,dedup,facesim,ferret,fluidanimate,freqmine,streamcluster,swaptions,vips,x264"
 specparsec="$specs","$parsecs"
 tails="img-dnn,masstree,moses,shore,silo,tailbench.sphinx"
+specparsectail=$specparsec,$tails
 
 benchmarks()
 {
@@ -71,6 +72,8 @@ benchmarks()
 		benches=$tails
 	elif [ "$bench_str" = "specparsec" ]; then
 		benches=$specparsec
+	elif [ "$bench_str" = "all" ]; then
+		benches=$specparsectail
 	fi
 }
 

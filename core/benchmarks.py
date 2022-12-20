@@ -25,6 +25,7 @@ features = ['sens', 'cont']
 functions = ['cv', 'test']
 models = ['LR', 'SGD', 'PA', 'PER', 'RID', 'LDA', 'QDA', 'SVC', 'NSVC', 'LSVC', \
 		  'DT', 'KN', 'RN', 'NC', 'NCA', 'GP', 'GNB', 'RF', 'ET', 'AB', 'HGB', 'GB', 'MLP']
+chosen_models = ['ET', 'RF', 'GB', 'MLP']
 
 p95 = True
 excluded_benchmarks = ['shore-1', 'masstree-8']

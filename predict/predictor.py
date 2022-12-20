@@ -12,6 +12,7 @@ def prediction(args):
 	if type(model) == str:
 		if train == 's': trained_with = 'spec/'
 		elif train == 's,p': trained_with = 'spec-parsec/'
+		elif train == 's,p,t': trained_with = 'spec-parsec-tail/'
 		else:
 			print(f"Models have not been trained with {train} yet")
 			return
