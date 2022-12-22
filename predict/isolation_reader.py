@@ -17,8 +17,7 @@ def read_pqos_files(pqos_file, run_periods):
 		else:
 			time = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") - datetime.timedelta(hours=3 if 'tailbench' in pqos_file else 2)
 			time = int(time.strftime("%s"))
-			if time < run_periods[0] or time > run_periods[1]:
-				continue
+			if time < run_periods[0] or time > run_periods[1]: continue
 			measure = row[2:]
 			for (i, event) in list(enumerate(events)):
 				pqos_measures[event].append(float(measure[i]))
@@ -38,11 +37,8 @@ def read_perf_file(filename, directory, run_periods, version = ''):
 				continue
 			if tokens[0] == '#' or '<not' in tokens or 'counted>' in tokens:
 				if tokens[1] == 'started':
-					start_t = datetime.datetime.strptime(' '.join(tokens[4:]), "%b %d %H:%M:%S %Y")
-					if filename.startswith('parsec'):
-						start_t = start_t - datetime.timedelta(hours=2)
-					if filename.startswith('tailbench'):
-						start_t = start_t - datetime.timedelta(hours=3)
+					start_t = datetime.datetime.strptime(' '.join(tokens[4:]), "%b %d %H:%M:%S %Y") - datetime.timedelta(hours=2)
+					#if filename.startswith('parsec'): start_t = start_t - datetime.timedelta(hours=2)
 					start_t = int(start_t.strftime("%s"))
 				line = perf_f.readline()
 				continue
@@ -130,15 +126,15 @@ def attach_pqos(all_measures):
 
 ############################################# Main ################################################
 
-def write_perf_measures(all_measures):
-	out_file = open(isolation_dir + 'perf/accumulated/perf_measures.csv', 'w')
+def write_perf_measures(all_measures, version = ''):
+	out_file = open(f"{isolation_dir}perf{version}/accumulated/perf_measures.csv", 'w')
 	writer = csv.writer(out_file)
 	for bench in all_measures:
 		writer.writerow(all_measures[bench])
 	out_file.close()
 
-def read_perf_measures():
-	try: in_file = open(isolation_dir + 'perf/accumulated/perf_measures.csv', 'r')
+def read_perf_measures(version):
+	try: in_file = open(f"{isolation_dir}perf{version}/accumulated/perf_measures.csv", 'r')
 	except: return {}
 	reader = csv.reader(in_file)
 	measures = dict()
@@ -149,8 +145,7 @@ def read_perf_measures():
 
 def perf_files(tool = 'pqos'):
 	version = ''
-	if len(tool.split('-')) == 2:
-		(tool, version) = tool.split('-')
+	if len(tool.split('-')) == 2: (tool, version) = tool.split('-')
 	directory = isolation_dir + tool + ('-' + version if version != '' else '') + '/raw_measures/'
 	files = list(filter(lambda x: x.endswith('csv'), os.listdir(directory)))
 	all_measures = dict()
@@ -165,7 +160,7 @@ def perf_files(tool = 'pqos'):
 				measures[event] = np.mean(measures[event])
 			all_measures[bench] = [bench] + list(measures.values()) + [int(bench.replace('img-dnn', 'imgdnn').split('-')[1])]
 	elif tool == 'perf':
-		cached_measures = read_perf_measures()
+		cached_measures = read_perf_measures('-' + version if version != '' else version)
 		if len(files) == len(list(cached_measures.keys())): return cached_measures
 		else:
 			final_title = []
@@ -193,6 +188,7 @@ def perf_files(tool = 'pqos'):
 					final_title = list(all_measures[bench].keys())
 					all_measures[bench] = [bench] + list(all_measures[bench].values())
 				all_measures['Title'] = ['Benchmark'] + final_title + final_title + ['Slowdown']
+				write_perf_measures(all_measures, version = f"-{version}")
 	return all_measures
 
 def time_cleanup(tool = 'perf'):

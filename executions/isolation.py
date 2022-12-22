@@ -2,8 +2,6 @@
 import sys
 sys.path.append("../core/")
 from benchmarks import *
-import libvirt_client
-import shell_command
 
 def hostnames_to_ip():
 	f = open("/root/.ssh/config")
@@ -18,6 +16,15 @@ def hostnames_to_ip():
 	return ips
 vm_ips = hostnames_to_ip()
 sc_split = "|sc|"
+
+def run_shell_command(command):
+	process = subprocess.Popen(command, stdout=subprocess.PIPE,
+	                                    stderr=subprocess.PIPE, shell=True)
+	time.sleep(2)
+	out, err = process.communicate()
+	time.sleep(2)
+	process.wait()
+	return out
 
 def get_vm_commands(bench, port, ip):
 	bench_name = bench[0]
@@ -62,9 +69,9 @@ def wait_for_benchmark(pid):
 def vm_pid(ip):
 	uuid = subprocess.check_output("ssh root@10.0.100." + ip + " 'echo $(basename $(readlink -f /var/lib/cloud/instance))'", shell = True)[:-1]
 	command = "nova show %s | grep -i 'OS-EXT-SRV-ATTR:instance_name' | awk -F'|' '{print $3}'" % str(uuid)
-	libvirt_instance_name = shell_command.run_shell_command(command).strip()
+	libvirt_instance_name = run_shell_command(command).strip()
 	command = "ps -ef | grep %s | grep \"qemu-system\" | grep -v grep | awk '{print $2}'" % (libvirt_instance_name)
-	pid = shell_command.run_shell_command(command).strip()
+	pid = run_shell_command(command).strip()
 	return pid
 
 def execute_perf(tool, ip):
@@ -82,6 +89,7 @@ def execute_perf(tool, ip):
 				 'LLC-load-misses,LLC-store-misses,dTLB-load-misses,' + \
 				 'dTLB-store-misses,iTLB-load-misses,' + \
 				 'L1-dcache-load-misses,L1-icache-load-misses,l2_rqsts.miss'
+		#events = 'branch-instructions,branch-misses,cycles,instructions,page-faults,context-switches,cpu-migrations,cache-references,cache-misses'
 		tool_cmd = "perf kvm --guest stat -e %(events)s -I %(int)s -o %(output)s -p %(pid)s &" \
 				   % {"events": events, "int": str(interval * 1000), "pid": pid, "output": output_file}
 	os.system(tool_cmd)
@@ -93,7 +101,7 @@ def execute_perf(tool, ip):
 		logger.info("======> %s has started, PID: %d", tool, tool_pid)
 		return tool_pid
 	except:
-		logger.info("! Did not find PID of %s" % tool)
+		logger.info("! Did not find PID of %s at host" % tool)
 
 def kill_perf(tool, tool_pid):
 	try:
@@ -116,13 +124,13 @@ def isolation_run(bench, port, tool):
 	if "tailbench" in bench[0]:
 		server, client = commands.split(sc_split)
 		ssh_server = "ssh " + host + " \'" + server + "\' &"
-		ssh_client = "ssh client \'" + client + "\' &"
+		ssh_client = "ssh client-1 \'" + client + "\' &"
 		os.system(ssh_server)
 		os.system(ssh_client)
 	else:
 		ssh_command = "ssh " + host + " \'" + commands + "\' &"
 		os.system(ssh_command)
-	pid = ssh_command_pid('client' if 'tailbench' in bench[0] else host)
+	pid = ssh_command_pid('client-1' if 'tailbench' in bench[0] else host)
 
 	wait_for_benchmark(pid)
 	kill_perf(tool, tool_pid)

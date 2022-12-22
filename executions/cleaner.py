@@ -25,17 +25,14 @@ def clean(filename):
 			hb_expected[int(tokens[2].split()[5])] = int(tokens[2].split()[-1].split('-')[-2].split('_')[0])
 			bench_expected[int(tokens[2].split()[5])] = tokens[2].split()[-1].split('-')[-3].split('.')[-1]
 			tail_exists = "tailbench" in line or tail_exists
-		if "ssh processes" in line:
-			ssh_fail += 1
+		if "ssh processes" in line: ssh_fail += 1
 		if "EVENT" in line:
 			event_data = tokens[2].replace("EVENT: ", "")
 			if not event_data.startswith("{"):
 				line = fp.readline()
 				continue
-			if '"output": ""' in event_data:
-				parsec_failed += 1
-			if "No space left on device" in event_data:
-				disk_failed += 1
+			if '"output": ""' in event_data: parsec_failed += 1
+			if "No space left on device" in event_data: disk_failed += 1
 			if "tailbench" in event_data:
 				tail_total += 1
 				if "lats.bin_error" in event_data or "RuntimeWarning" in event_data:
@@ -78,7 +75,7 @@ def clean(filename):
 		if filename in os.listdir(results_dir + 'trash/'): os.remove(results_dir + 'trash/' + filename)
 
 def files_at_results(benchmarks):
-	if benchmarks == []:
+	if benchmarks == ['all']:
 		benchmarks = set(map(lambda x: x.split("_")[0], map(lambda x: x.split('-')[0], filter(lambda x: x.endswith('.txt') and not x.startswith('internal'), os.listdir(results_dir)))))
 	for bench in benchmarks:
 		try: files = subprocess.check_output("ls " + results_dir + bench + "*-*txt", shell=True)

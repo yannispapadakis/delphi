@@ -280,7 +280,7 @@ def name_fix(name):
 """------------------------------- Main -----------------------------------"""
 algorithms = {'random': random_pairs, 'oracle': oracle, 'whisker': whisker, 'delphi': delphi, 'delphi2': delphi_2, 'delphi3': delphi3}
 alg_config = {'random':  [100, ['r'],      [2]],
-			  'oracle':  [1,   ['r'], [2]],
+			  'oracle':  [1,   ['r', 'p'], [2]],
 			  'whisker': [1,   ['r'],      [2]],
 			  'delphi':  [100, ['r', 'p'], [2, 3]],
 			  'delphi2': [1,   ['r', 'p'], [2, 3]],
