@@ -1,10 +1,15 @@
 #!/usr/bin/python3
 import sys
-sys.path.append('../core/')
-from read_vm_output import *
+sys.path.append('../predict/')
+from heatmap import *
 
+contentions = ['l', 'm', 'h']
 def pred_file(feature, qos, classes):
 	return f"{predictions_dir}SVC/SVC_{feature}_{classes}_{qos}_spt_cv.csv"
+
+def workload_filename(contention, size, qos_in):
+	cont = {'l': 'low', 'm': 'med', 'h': 'high'}
+	return f"{workload_dir}{cont[contention]}-{size}-{qos_in}.csv"
 
 def benchmarks_list(qos, classes):
 	(sens_f, cont_f) = [open(pred_file(feature, qos, classes), 'r') for feature in features]
@@ -20,9 +25,10 @@ def benchmarks_list(qos, classes):
 		if index in groups:
 			groups[index].append(bench)
 		else: groups[index] = [bench]
+	for fd in [sens_f, cont_f]: fd.close()
 	return groups
 
-def generate_workload(contention, size, qos_in, classes):
+def generate_workload(contention, size, qos_in, classes, printed = True):
 	qos = qos_levels if qos_in == 'all' else [float(qos_in)]
 	groups = dict((slo, benchmarks_list(slo, classes)) for slo in qos)
 	bench_list = []
@@ -36,13 +42,13 @@ def generate_workload(contention, size, qos_in, classes):
 				return
 			slo = random.choice(qos_to_choose)
 			bench_list.append(f"{random.choice(groups[slo][c])},{slo}")
-	cont = {'l': 'low', 'm': 'med', 'h': 'high'}
-	wl_file = open(f"{workload_dir}{cont[contention]}-{size}-{qos_in}.csv", 'w')
-	for row in bench_list: wl_file.write(row + '\n')
-	wl_file.close()
+	if printed:
+		wl_file = open(workload_filename(contention, size, qos_in), 'w')
+		for row in bench_list: wl_file.write(row + '\n')
+		wl_file.close()
+	return list(set([f"{i},{row[0]},{row[1]}" for (i, row) in enumerate(map(lambda x: x.split(','), bench_list))]))
 
-def arg_check(args):
-	contentions = ['l', 'm', 'h']
+def arg_check_generate_workload(args):
 	if len(args) < 5 or \
 	   args[1] not in contentions or \
 	   not all([x.isdigit() for x in args[2]]) or \
@@ -56,6 +62,6 @@ def arg_check(args):
 		sys.exit(1)
 
 if __name__ == '__main__':
-	arg_check(sys.argv)
+	arg_check_generate_workload(sys.argv)
 	(contention, size, qos, classes) = sys.argv[1:]
 	generate_workload(contention, int(size), qos, int(classes))

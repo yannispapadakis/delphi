@@ -1,16 +1,14 @@
 #!/usr/bin/python3
-import sys
-sys.path.append('../predict/')
-from heatmap import *
+from generate_workloads import *
 #from attackers_read import attacker_classifier
 
 from matching.algorithms import stable_roommates
+import warnings
 from matching import Player
 
 report = ''
 heatmap = spawn_heatmap()
 read_heatmap(heatmap)
-workload_files = list(filter(lambda x: x.endswith('csv'), os.listdir(workload_dir)))
 
 """--------------------------- Random Pairing -----------------------------"""
 def random_pairs(benchmarks, version, class_):
@@ -33,6 +31,7 @@ def oracle(benchmarks, version, class_):
 	players = [Player(x) for x in benchmarks]
 
 	window = dict()
+	warnings.filterwarnings("ignore", category=UserWarning, module="matching")
 	if version == 'r': use_heatmap = heatmap
 	else:
 		use_heatmap = spawn_heatmap()
@@ -91,7 +90,7 @@ def get_model(feature, classes, qos):
 	for model in chosen_models:
 		try: model_pred = open(f"{predictions_dir}{model}/{model}_{feature}_{classes}_{qos}_{run}.csv", 'r')
 		except: continue
-		predictions = [int(line[1] == line[2]) for line in csv.reader(model_pred, delimiter='\t') if line[0] != 'Bench']
+		predictions = [int(line[1] == line[2]) for line in csv.reader(model_pred, delimiter='\t') if line[0] != 'Bench' and line[0] != 'Accuracy']
 		accuracy[model] = sum(predictions) / float(len(predictions))
 		model_pred.close()
 	model = max(accuracy.items(), key = itemgetter(1))[0]
@@ -121,7 +120,7 @@ def delphi(benchmarks, version, classes):
 		qos = min(map(lambda x: float(x.split(',')[2]), benchmarks))
 		for f in features:
 			with open(get_model(f, classes, qos), mode='r') as pred:
-				predictions[f] = dict((rows[0], rows[1 + int(version == 'r')]) for rows in csv.reader(pred, delimiter='\t') if rows[0] != 'Bench')
+				predictions[f] = dict((rows[0], rows[1 + int(version == 'r')]) for rows in csv.reader(pred, delimiter='\t') if rows[0] != 'Bench' and rows[0] != 'Accuracy')
 				pred.close()
 		return dict((x, (int(predictions['sens'][x.split(',')[1]]), int(predictions['cont'][x.split(',')[1]]))) for x in benchmarks)
 
@@ -190,7 +189,7 @@ def get_predictions(benchmarks, version, classes):
 		predictions[s] = dict()
 		for f in features:
 			pred_f = open(get_model(f, classes, s), mode = 'r')
-			predictions[s][f] = dict((rows[0], int(rows[1 + int(version == 'r')])) for rows in csv.reader(pred_f, delimiter='\t') if rows[0] != 'Bench')
+			predictions[s][f] = dict((rows[0], int(rows[1 + int(version == 'r')])) for rows in csv.reader(pred_f, delimiter='\t') if rows[0] != 'Bench' and rows[0] != 'Accuracy')
 			pred_f.close()
 	return dict((f"{i},{name},{slo}", 
 				{'slo': float(slo),
@@ -278,52 +277,61 @@ def name_fix(name):
 	return (int(tokens[0]), tokens[1], float(tokens[2]))
 
 """------------------------------- Main -----------------------------------"""
-algorithms = {'random': random_pairs, 'oracle': oracle, 'whisker': whisker, 'delphi': delphi, 'delphi2': delphi_2, 'delphi3': delphi3}
-alg_config = {'random':  [100, ['r'],      [2]],
-			  'oracle':  [1,   ['r', 'p'], [2]],
-			  'whisker': [1,   ['r'],      [2]],
-			  'delphi':  [100, ['r', 'p'], [2, 3]],
-			  'delphi2': [1,   ['r', 'p'], [2, 3]],
-			  'delphi3': [100, ['r', 'p'], [2, 3]]}
+alg_config = {'random':  [random_pairs,	100, ['r'],      [2]],
+			  'oracle':  [oracle,		1,   ['r', 'p'], [2]],
+			  'whisker': [whisker,		1,   ['r'],      [2]],
+#			  'delphi':  [delphi,		100, ['r', 'p'], [2, 3]],
+#			  'delphi2': [delphi_2,		1,   ['r', 'p'], [2, 3]],
+			  'delphi3': [delphi3,		100, ['r', 'p'], [2, 3]]}
 
-def arg_check(args):
-	if (len(args) < 2) or \
-	   (not all(map(lambda x: x in list(algorithms.keys()) + ['all'], args[1].split(',')))) or \
-	   (len(args) > 2 and args[2] not in workload_files):
-		print(f"Usage:      {args[0]} <algorithm> <workload> <version> <classes>\n" + \
-			  f"Algorithms: {' | '.join(list(algorithms.keys()) + ['all'])}\n" + \
-			  f"Workload:   {' | '.join(workload_files)}\n" + \
-			  f"Version:    r (real) | p (predicted) | a (attackers)\n" + \
-			  f"Classes:    {' | '.join(map(str, classes_))}")
+def run_all_algorithms(args):
+	arg_check_pairing(args)
+	algorithms_to_run = alg_config if args[1] == 'all' else args[1].split(',')
+	if all([x.isdigit() for x in args[2]]):
+		times_to_run = int(args[2])
+		contentions_to_run = contentions
+		qos_ins = [1.1, 1.2, 'all']
+	else:
+		times_to_run = 1
+		contentions_to_run = args[2].split(',')
+		qos_ins = list(map(float, filter(lambda x: '.' in x, args[3].split(',')))) + \
+				  list(filter(lambda x: 'all' in x, args[3].split(',')))
+	size = 100
+	classes_workload = 2
+	results = dict()
+	for i in range(times_to_run):
+		for (contention, qos_in) in list(product(*[contentions_to_run, qos_ins])):
+			benchmarks = generate_workload(contention, size, qos_in, classes_workload, printed = times_to_run == 1)
+			workload = workload_filename(contention, size, qos_in)
+			print(f"{'-'*40} {workload.split('/')[-1]} {'-'*(50 - len(workload.split('/')[-1]))}")
+			for algo in algorithms_to_run:
+				(runs, versions, classes) = alg_config[algo][1:]
+				configs = list(product(*[versions, classes]))
+				for (version, cl) in configs:
+					tries = 10
+					while tries > 0:
+						violations = np.mean([violations_counter(alg_config[algo][0](benchmarks, version, cl)) for i in range(runs)])
+						if violations == -1:
+							tries -= 1
+						else: break
+					conf_str = (f" {version} - {cl}" if len(configs) > 1 else "")
+					print(f"{algo}{conf_str}: {violations}")
+					if (contention, qos_in, algo, version, cl) in results: results[(contention, qos_in, algo, version, cl)].append(violations)
+					else: results[(contention, qos_in, algo, version, cl)] = [violations]
+	for configuration in results: results[configuration] = np.mean(results[configuration])
+	pprint.pprint(results)
+
+def arg_check_pairing(args):
+	if (len(args) < 3) or \
+	   not all(map(lambda x: x in list(alg_config.keys()) + ['all'], args[1].split(','))) or \
+	   (len(args) == 3 and not all([x.isdigit() for x in args[2]])) or \
+	   (len(args) == 4 and not all(map(lambda x: x in contentions, args[2].split(',')))) or \
+	   (len(args) == 4 and not all(map(lambda x: x in list(map(str, qos_levels)) + ['all'], args[3].split(',')))):
+		print(f"Usage:      {args[0]} <algorithm> <contention | times to run> <qos>\n" + \
+			  f"Algorithms: {' | '.join(list(alg_config.keys()) + ['all'])}\n" + \
+			  f"Contention: {' | '.join(contentions)}\n" + \
+			  f"QoS incl.:  {' | '.join(list(map(str, qos_levels)) + ['all'])}")
 		sys.exit(0)
 
-def pairs_run(args):
-	arg_check(args)
-	if len(args) < 3:
-		algorithms_to_run = algorithms if args[1] == 'all' else args[1].split(',')
-		for workload in os.listdir(workload_dir):
-			global report
-			wd_file = open(workload_dir + workload)
-			benchmarks = list(set([f"{i},{row[0]},{row[1]}" for (i, row) in enumerate(csv.reader(wd_file, delimiter=','))]))
-			wd_file.close()
-			print(f"{'-'*40} {workload} {'-'*(50 - len(workload))}")
-			results = dict()
-			for algo in algorithms_to_run:
-				(runs, versions, classes) = alg_config[algo]
-				configs = list(product(*[versions, classes]))
-				for (version, class_) in configs:
-					violations = np.mean([violations_counter(algorithms[algo](benchmarks, version, class_)) for i in range(runs)])
-					results[(algo, version, class_)] = violations
-					conf_str = (f" {version} - {class_}" if len(configs) > 1 else "")
-					print(f"{algo}{conf_str}: {report}{violations}")
-			report = ''
-	elif len(args) == 5:
-		(workload, version, class_) = (args[2], args[3], int(args[4])) if len(args) == 5 else (args[2], 'r', 2)
-		wd_file = open(workload_dir + workload)
-		benchmarks = list(set([f"{i},{row[0]},{row[1]}" for (i, row) in enumerate(csv.reader(wd_file, delimiter=','))]))
-		wd_file.close()
-		violations = violations_counter(algorithms[args[1]](benchmarks, version, class_))
-		print(f"{report}Violations: {violations}")
-
 if __name__ == '__main__':
-	pairs_run(sys.argv)
+	run_all_algorithms(sys.argv)
