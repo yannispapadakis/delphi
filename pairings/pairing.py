@@ -287,15 +287,10 @@ alg_config = {'random':  [random_pairs,	100, ['r'],      [2]],
 def run_all_algorithms(args):
 	arg_check_pairing(args)
 	algorithms_to_run = alg_config if args[1] == 'all' else args[1].split(',')
-	if all([x.isdigit() for x in args[2]]):
-		times_to_run = int(args[2])
-		contentions_to_run = contentions
-		qos_ins = [1.1, 1.2, 'all']
-	else:
-		times_to_run = 1
-		contentions_to_run = args[2].split(',')
-		qos_ins = list(map(float, filter(lambda x: '.' in x, args[3].split(',')))) + \
-				  list(filter(lambda x: 'all' in x, args[3].split(',')))
+	times_to_run = int(args[2])
+	contentions_to_run = args[3].split(',') if len(args) >= 4 else contentions
+	qos_ins = list(map(float, filter(lambda x: '.' in x, args[3].split(',')))) + \
+			  list(filter(lambda x: 'all' in x, args[3].split(','))) if len(args) >= 5 else [1.1, 1.2, 'all']
 	size = 100
 	classes_workload = 2
 	results = dict()
@@ -326,9 +321,9 @@ def arg_check_pairing(args):
 	if (len(args) < 3) or \
 	   not all(map(lambda x: x in list(alg_config.keys()) + ['all'], args[1].split(','))) or \
 	   (len(args) == 3 and not all([x.isdigit() for x in args[2]])) or \
-	   (len(args) == 4 and not all(map(lambda x: x in contentions, args[2].split(',')))) or \
-	   (len(args) == 4 and not all(map(lambda x: x in list(map(str, qos_levels)) + ['all'], args[3].split(',')))):
-		print(f"Usage:      {args[0]} <algorithm> <contention | times to run> <qos>\n" + \
+	   (len(args) == 4 and not all(map(lambda x: x in contentions, args[3].split(',')))) or \
+	   (len(args) == 5 and not all(map(lambda x: x in list(map(str, qos_levels)) + ['all'], args[4].split(',')))):
+		print(f"Usage:      {args[0]} <algorithm> <times to run> <contention> <qos>\n" + \
 			  f"Algorithms: {' | '.join(list(alg_config.keys()) + ['all'])}\n" + \
 			  f"Contention: {' | '.join(contentions)}\n" + \
 			  f"QoS incl.:  {' | '.join(list(map(str, qos_levels)) + ['all'])}")
