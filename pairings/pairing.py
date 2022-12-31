@@ -314,10 +314,11 @@ def run_all_algorithms(args):
 						if violations == -1:
 							tries -= 1
 						else: break
-					conf_str = (f" {version} - {cl}" if len(configs) > 1 else "")
+					conf_str = f" {version} - {cl}" if len(configs) > 1 else ""
 					print(f"{algo}{conf_str}: {violations}")
-					if (contention, qos_in, algo, version, cl) in results: results[(contention, qos_in, algo, version, cl)].append(violations)
-					else: results[(contention, qos_in, algo, version, cl)] = [violations]
+					if violations > -1:
+						if (contention, qos_in, algo, version, cl) in results: results[(contention, qos_in, algo, version, cl)].append(violations)
+						else: results[(contention, qos_in, algo, version, cl)] = [violations]
 	for configuration in results: results[configuration] = np.mean(results[configuration])
 	pprint.pprint(results)
 
