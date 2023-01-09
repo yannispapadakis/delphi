@@ -65,8 +65,8 @@ def box_plot_classvsclass(qos, class_):
 	plt.savefig(f"{results_dir}ClassVClass_{class_}_{qos}.png")
 	plt.clf()
 
-def all_violations_boxplots():
-	run_all_algorithms(['', 'all', str(100)])
+def all_violations_boxplots(mode = ''):
+	if mode == 'new': run_all_algorithms(['', 'all', str(100)])
 	for slo in map(lambda x: x.split('-')[1].split('.csv')[0], filter(lambda x: 'boxplot' in x, os.listdir(f"{violations_dir}"))):
 		violations_boxplot(slo)
 
@@ -83,7 +83,7 @@ def violations_boxplot(slo):
 			renamed_columns[column] = new_name.strip()
 		return renamed_columns
 
-	with open(f"{results_dir}violations/boxplots/boxplot-{slo}.csv", 'r') as violations_file:
+	with open(f"{violations_dir}boxplot-{slo}.csv", 'r') as violations_file:
 		df = pd.read_csv(violations_file, delimiter = ',')
 	df = df.rename(columns = column_rename(df.columns))
 	bp = df.boxplot(figsize = (21,15), return_type = 'both', rot = 90, patch_artist=True)
@@ -133,14 +133,16 @@ def violations_boxplot(slo):
 	plt.text(xanchor + box_size + interval, yanchor + 0.1, 'High', fontsize = fontsize - 2)
 
 	plt.tight_layout()
-	previous_runs = len(filter(lambda x: f"violations_{slo}" in x, os.listdir(f"{violations_dir}")))
+	previous_runs = len(list(filter(lambda x: f"violations_{slo}" in x, os.listdir(f"{violations_dir}"))))
 	plt.savefig(f"{violations_dir}/violations_{slo}_{previous_runs}.png")
 	plt.clf()
 
 if __name__ == '__main__':
-	if True:
-		all_violations_boxplots()
-	else:
+	try: mode = sys.argv[1]
+	except: mode = ''
+	if mode == 'new' or not mode:
+		all_violations_boxplots(mode)
+	elif mode == 'cvc':
 		for qos in qos_levels:
 			for c in classes_:
 				box_plot_classvsclass(qos, c)
