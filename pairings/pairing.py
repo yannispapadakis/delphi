@@ -53,9 +53,8 @@ def oracle(benchmarks, version, class_):
 def whisker(benchmarks, version, class_):
 	players = [Player(x) for x in benchmarks]
 
-	f = open(f"{heatmap_dir}whisker-stats.csv", 'r')
-	whisk_str = dict((rows[0], (float(rows[1]), float(rows[2]))) for rows in csv.reader(f))
-	f.close()
+	with open(f"{heatmap_dir}whisker-stats.csv", 'r') as f:
+		whisk_str = dict((rows[0], (float(rows[1]), float(rows[2]))) for rows in csv.reader(f))
 	whiskers = dict((x, whisk_str[x.name.split(',')[1]]) for x in players)
 
 	for bench in players:
@@ -88,11 +87,9 @@ def get_model(feature, classes, qos):
 	run = "spt_cv"
 	accuracy = dict()
 	for model in chosen_models:
-		try: model_pred = open(f"{predictions_dir}{model}/{model}_{feature}_{classes}_{qos}_{run}.csv", 'r')
-		except: continue
-		predictions = [int(line[1] == line[2]) for line in csv.reader(model_pred, delimiter='\t') if line[0] != 'Bench' and line[0] != 'Accuracy']
-		accuracy[model] = sum(predictions) / float(len(predictions))
-		model_pred.close()
+		with open(f"{predictions_dir}{model}/{model}_{feature}_{classes}_{qos}_{run}.csv", 'r') as model_pred:
+			predictions = [int(line[1] == line[2]) for line in csv.reader(model_pred, delimiter='\t') if line[0] != 'Bench' and line[0] != 'Accuracy']
+			accuracy[model] = sum(predictions) / float(len(predictions))
 	model = max(accuracy.items(), key = itemgetter(1))[0]
 	#print(f"get_model called with: {feature} {classes} {qos} => {model}")
 	#global report
@@ -188,9 +185,8 @@ def get_predictions(benchmarks, version, classes):
 	for s in slos:
 		predictions[s] = dict()
 		for f in features:
-			pred_f = open(get_model(f, classes, s), mode = 'r')
-			predictions[s][f] = dict((rows[0], int(rows[1 + int(version == 'r')])) for rows in csv.reader(pred_f, delimiter='\t') if rows[0] != 'Bench' and rows[0] != 'Accuracy')
-			pred_f.close()
+			with open(get_model(f, classes, s), mode = 'r') as pred_f:
+				predictions[s][f] = dict((rows[0], int(rows[1 + int(version == 'r')])) for rows in csv.reader(pred_f, delimiter='\t') if rows[0] != 'Bench' and rows[0] != 'Accuracy')
 	return dict((f"{i},{name},{slo}", 
 				{'slo': float(slo),
 				 'sens': predictions[float(slo)]['sens'][name],
@@ -276,29 +272,30 @@ def name_fix(name):
 	tokens = name.split(',')
 	return (int(tokens[0]), tokens[1], float(tokens[2]))
 
+def setting_str(contention, algorithm, version, cl): return f"{contention}_{algorithm}_{version}_{cl}"
+
 """------------------------------- Main -----------------------------------"""
-alg_config = {'random':  [random_pairs,	100, ['r'],      [2]],
-			  'oracle':  [oracle,		1,   ['r', 'p'], [2]],
-			  'whisker': [whisker,		1,   ['r'],      [2]],
-#			  'delphi':  [delphi,		100, ['r', 'p'], [2, 3]],
-#			  'delphi2': [delphi_2,		1,   ['r', 'p'], [2, 3]],
-			  'delphi3': [delphi3,		100, ['r', 'p'], [2, 3]]}
+alg_config = {'random':	[random_pairs,	100, ['r'],      [2]],
+			  'oracle':	[oracle,		1,   ['r', 'p'], [2]],
+			  #'whisker':[whisker,		1,   ['r'],      [2]],
+			  #'delphi': [delphi,		100, ['r', 'p'], [2, 3]],
+			  #'delphi2':[delphi_2,		1,   ['r', 'p'], [2, 3]],
+			  'delphi':	[delphi3,		100, ['r', 'p'], [2, 3]]}
 
 def run_all_algorithms(args):
 	arg_check_pairing(args)
 	algorithms_to_run = alg_config if args[1] == 'all' else args[1].split(',')
 	times_to_run = int(args[2])
 	contentions_to_run = args[3].split(',') if len(args) >= 4 else contentions
-	qos_ins = list(map(float, filter(lambda x: '.' in x, args[3].split(',')))) + \
-			  list(filter(lambda x: 'all' in x, args[3].split(','))) if len(args) >= 5 else [1.1, 1.2, 'all']
+	qos_ins = list(map(float, filter(lambda x: '.' in x, args[4].split(',')))) + \
+			  list(filter(lambda x: 'all' in x, args[4].split(','))) if len(args) >= 5 else [1.1, 1.2, 'all']
 	size = 100
 	classes_workload = 2
-	results = dict()
+	results = dict((qos, dict()) for qos in qos_ins)
 	for i in range(times_to_run):
 		for (contention, qos_in) in list(product(*[contentions_to_run, qos_ins])):
 			benchmarks = generate_workload(contention, size, qos_in, classes_workload, printed = times_to_run == 1)
 			workload = workload_filename(contention, size, qos_in)
-			print(f"{'-'*40} {workload.split('/')[-1]} {'-'*(50 - len(workload.split('/')[-1]))}")
 			for algo in algorithms_to_run:
 				(runs, versions, classes) = alg_config[algo][1:]
 				configs = list(product(*[versions, classes]))
@@ -306,22 +303,23 @@ def run_all_algorithms(args):
 					tries = 10
 					while tries > 0:
 						violations = np.mean([violations_counter(alg_config[algo][0](benchmarks, version, cl)) for i in range(runs)])
-						if violations == -1:
-							tries -= 1
+						if violations < 0: tries -= 1
 						else: break
 					conf_str = f" {version} - {cl}" if len(configs) > 1 else ""
-					print(f"{algo}{conf_str}: {violations}")
-					if violations > -1:
-						if (contention, qos_in, algo, version, cl) in results: results[(contention, qos_in, algo, version, cl)].append(violations)
-						else: results[(contention, qos_in, algo, version, cl)] = [violations]
-	for configuration in results: results[configuration] = np.mean(results[configuration])
-	pprint.pprint(results)
+					set_str = setting_str(contention, algo, version, cl)
+					if set_str in results[qos_in]: results[qos_in][set_str].append(violations if violations > -1 else "")
+					else: results[qos_in][set_str] = [violations if violations > -1 else ""]
+	for qos in results:
+		resultsT = zip(*[(k, *v) for k, v in results[qos].items()])
+		with open(f"{violations_dir}boxplot-{qos}.csv", 'w', newline='') as csvfile:
+			writer = csv.writer(csvfile)
+			writer.writerows(resultsT)
 
 def arg_check_pairing(args):
 	if (len(args) < 3) or \
 	   not all(map(lambda x: x in list(alg_config.keys()) + ['all'], args[1].split(','))) or \
-	   (len(args) == 3 and not all([x.isdigit() for x in args[2]])) or \
-	   (len(args) == 4 and not all(map(lambda x: x in contentions, args[3].split(',')))) or \
+	   (len(args) >= 3 and not all([x.isdigit() for x in args[2]])) or \
+	   (len(args) >= 4 and not all(map(lambda x: x in contentions, args[3].split(',')))) or \
 	   (len(args) == 5 and not all(map(lambda x: x in list(map(str, qos_levels)) + ['all'], args[4].split(',')))):
 		print(f"Usage:      {args[0]} <algorithm> <times to run> <contention> <qos>\n" + \
 			  f"Algorithms: {' | '.join(list(alg_config.keys()) + ['all'])}\n" + \
