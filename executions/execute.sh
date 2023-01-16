@@ -59,6 +59,7 @@ specs="astar,bzip2,bwaves,cactusADM,calculix,dealII,gamess,gcc,GemsFDTD,gobmk,gr
 parsecs="blackscholes,bodytrack,canneal,dedup,facesim,ferret,fluidanimate,freqmine,streamcluster,swaptions,vips,x264"
 specparsec="$specs","$parsecs"
 tails="img-dnn,masstree,moses,shore,silo,tailbench.sphinx"
+parsectail="$parsecs","$tails"
 specparsectail=$specparsec,$tails
 
 benchmarks()
@@ -74,6 +75,8 @@ benchmarks()
 		benches=$specparsec
 	elif [ "$bench_str" = "all" ]; then
 		benches=$specparsectail
+	elif [ "$bench_str" = "parsectail" ]; then
+		benches=$parsectail
 	fi
 }
 
@@ -98,5 +101,6 @@ elif [ $# -eq 4 ]; then
 	vcpus2=$4
 	run_coexecution $benches1 $vcpus $benches $vcpus2
 fi
+./cleaner.py all
 
 kill -15 $internal_pid

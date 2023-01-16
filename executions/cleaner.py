@@ -22,8 +22,8 @@ def clean(filename):
 			line = fp.readline()
 			continue
 		if "Spawned new VM" in line:
-			hb_expected[int(tokens[2].split()[5])] = int(tokens[2].split()[-1].split('-')[-2].split('_')[0])
-			bench_expected[int(tokens[2].split()[5])] = tokens[2].split()[-1].split('-')[-3].split('.')[-1]
+			hb_expected[int(tokens[2].split()[5])] = int(tokens[2].split()[8].split('-')[-2].split('_')[0])
+			bench_expected[int(tokens[2].split()[5])] = tokens[2].split()[8].split('-')[-3].split('.')[-1]
 			tail_exists = "tailbench" in line or tail_exists
 		if "ssh processes" in line: ssh_fail += 1
 		if "EVENT" in line:
@@ -68,9 +68,14 @@ def clean(filename):
 		os.rename(dir_ + filename, dest + filename)
 	else:
 		fn_fix = filename.replace('img-dnn', 'imgdnn')
-		(b1, v1, b2, v2) = [y for x in list(map(lambda x: x.split('_'), fn_fix.split('.txt')[0].split('-'))) for y in x]
-		(b1, b2) = (b1.replace('imgdnn', 'img-dnn'), b2.replace('imgdnn', 'img-dnn'))
-		dest = coexecutions_dir + b1 + '/' + v1 + 'vs' + v2 + '/'
+		try:
+			(b1, v1, b2, v2) = [y for x in list(map(lambda x: x.split('_'), fn_fix.split('.txt')[0].split('-'))) for y in x]
+			(b1, b2) = (b1.replace('imgdnn', 'img-dnn'), b2.replace('imgdnn', 'img-dnn'))
+			dest = coexecutions_dir + b1 + '/' + v1 + 'vs' + v2 + '/'
+		except:
+			tool = fn_fix.split('.txt')[0].split('-')[1]
+			if tool.startswith('p'): dest = isolation_dir + tool + '/outputs/'
+			else: dest = isolation_dir + 'attackers/'
 		os.rename(dir_ + filename, dest + filename)
 		if filename in os.listdir(results_dir + 'trash/'): os.remove(results_dir + 'trash/' + filename)
 

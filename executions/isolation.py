@@ -26,7 +26,7 @@ def run_shell_command(command):
 	process.wait()
 	return out
 
-def get_vm_commands(bench, port, ip):
+def get_vm_commands(bench, port, ip, vcpus = 0):
 	bench_name = bench[0]
 	vm_name = bench_name.replace('.','-') if "parsec" in bench_name else bench_name
 	vm_name = '-'.join(["acticloud1", "gold", vm_name, "1_times", "to_completion"])
@@ -51,6 +51,7 @@ def get_vm_commands(bench, port, ip):
 		udata += tailbench_client % {"vcpus": vcpus, "ip": ip, "times_to_run": 1, "seq_num": 0,
 									 "bench": bench_name.split('.')[1], "port": port}
 	udata += vm_footer % {"port": port, "seq_num": 0}
+	if vcpus > 0: return (udata, benches_vcpus[bench_name]['runtime_isolation'][vcpus])
 	return udata
 
 def ssh_command_pid(host):
@@ -74,7 +75,7 @@ def vm_pid(ip):
 	pid = run_shell_command(command).strip()
 	return pid
 
-def execute_perf(tool, ip):
+def execute_perf(tool, ip, runtime):
 	perf_dir = "/home/ypap/measurements-" + tool + '/'
 	output_file = perf_dir + bench[0] + '-' + str(bench[2]) + '.csv'
 	interval = 1
@@ -92,6 +93,9 @@ def execute_perf(tool, ip):
 		#events = 'branch-instructions,branch-misses,cycles,instructions,page-faults,context-switches,cpu-migrations,cache-references,cache-misses'
 		tool_cmd = "perf kvm --guest stat -e %(events)s -I %(int)s -o %(output)s -p %(pid)s &" \
 				   % {"events": events, "int": str(interval * 1000), "pid": pid, "output": output_file}
+	else: # attackers
+		tool_cmd = "/home/ypap/iBench/src/%(tool)s %(runtime)s &" \
+					% {"tool": tool, "runtime": str(3 * runtime)}
 	os.system(tool_cmd)
 	tool_pid = subprocess.check_output("ps -ef | grep '%s'" % tool, shell = True)
 	try:
@@ -99,6 +103,7 @@ def execute_perf(tool, ip):
 					   filter(lambda x: len(x) > 7 and tool in x[7], \
 					   map(lambda x: x.split(), tool_pid.split("\n"))))[0])
 		logger.info("======> %s has started, PID: %d", tool, tool_pid)
+		if not tool.startswith('p') and not tool.startswith('c'): os.system("taskset -pc 9 " + str(tool_pid))
 		return tool_pid
 	except:
 		logger.info("! Did not find PID of %s at host" % tool)
@@ -118,8 +123,10 @@ def kill_perf(tool, tool_pid):
 
 def isolation_run(bench, port, tool):
 	host = 'vm1-' + str(bench[2])
-	commands = get_vm_commands(bench, port, vm_ips[host])
-	tool_pid = execute_perf(tool, vm_ips[host])
+	commands = get_vm_commands(bench, port, vm_ips[host], bench[2] if not tool.startswith('p') else 0)
+	runtime = 1
+	if not tool.startswith('p'): (commands, runtime) = commands
+	tool_pid = execute_perf(tool, vm_ips[host], runtime)
 
 	if "tailbench" in bench[0]:
 		server, client = commands.split(sc_split)

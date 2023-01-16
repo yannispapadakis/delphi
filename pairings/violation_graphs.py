@@ -65,10 +65,14 @@ def box_plot_classvsclass(qos, class_):
 	plt.savefig(f"{results_dir}ClassVClass_{class_}_{qos}.png")
 	plt.clf()
 
-def all_violations_boxplots(mode = ''):
-	if mode == 'new': run_all_algorithms(['', 'all', str(100)])
-	for slo in map(lambda x: x.split('-')[1].split('.csv')[0], filter(lambda x: 'boxplot' in x, os.listdir(f"{violations_dir}"))):
-		violations_boxplot(slo)
+def all_violations_boxplots(args):
+	try:
+		args[1] == 'new'
+		run_all_algorithms(args[1:])
+	except: pass
+	finally:
+		for slo in map(lambda x: x.split('-')[1].split('.csv')[0], filter(lambda x: 'boxplot' in x, os.listdir(f"{violations_dir}"))):
+			violations_boxplot(slo)
 
 def violations_boxplot(slo):
 	def column_rename(columns):
@@ -141,7 +145,7 @@ if __name__ == '__main__':
 	try: mode = sys.argv[1]
 	except: mode = ''
 	if mode == 'new' or not mode:
-		all_violations_boxplots(mode)
+		all_violations_boxplots(sys.argv)
 	elif mode == 'cvc':
 		for qos in qos_levels:
 			for c in classes_:

@@ -4,8 +4,9 @@ sys.path.append('../predict/')
 from heatmap import *
 
 contentions = ['l', 'm', 'h']
+bench_suites = ['s', 'sp', 'spt'][2]
 def pred_file(feature, qos, classes):
-	return f"{predictions_dir}SVC/SVC_{feature}_{classes}_{qos}_spt_cv.csv"
+	return f"{predictions_dir}SVC/SVC_{feature}_{classes}_{qos}_{bench_suites}_cv.csv"
 
 def workload_filename(contention, size, qos_in):
 	cont = {'l': 'low', 'm': 'med', 'h': 'high'}
