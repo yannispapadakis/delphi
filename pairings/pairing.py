@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 from generate_workloads import *
-#from attackers_read import attacker_classifier
 
 from alive_progress import alive_bar
 from matching.algorithms import stable_roommates
@@ -8,7 +7,6 @@ import warnings
 import pickle
 from matching import Player
 
-report = ''
 contention_now = 'l'
 probabilities = {c: {} for c in [2, 3]}
 size = 100
@@ -141,37 +139,49 @@ def delphi(benchmarks, version, classes):
 	pairs += safe_pairs(zeros, notzeros)
 	return list(map(lambda x: [name_fix(x[0][0]), name_fix(x[1][0])], pairs))
 
-"""---------------------- delphi3 Pairing Algorithm - mult SLOs -----------"""
+"""---------------------- delphi4 Pairing Algorithm - mult SLOs -----------"""
 def get_predictions(benchmarks, version, classes):
 	predictions = dict()
 	slos = sorted(list(set(map(float, map(lambda x: x.split(',')[2], benchmarks)))))
 	for s in slos:
 		predictions[s] = dict()
 		for f in features:
-			with open(get_model(f, classes, s), mode = 'r') as pred_f:
-				predictions[s][f] = dict((rows[0], int(rows[1 + int(version == 'r')])) for rows in csv.reader(pred_f, delimiter='\t') if rows[0] != 'Bench' and rows[0] != 'Accuracy')
+			if version == 'a':
+				predictions[s][f] = attacker_classifier(f, s, classes)
+			else:
+				with open(get_model(f, classes, s), mode = 'r') as pred_f:
+					predictions[s][f] = dict((rows[0], int(rows[1 + int(version == 'r')])) for rows in csv.reader(pred_f, delimiter='\t') if rows[0] != 'Bench' and rows[0] != 'Accuracy')
 	return dict((f"{i},{name},{slo}",
 				{'slo': float(slo),
 				 'sens': predictions[float(slo)]['sens'][name],
 				 'cont': dict((i, predictions[i]['cont'][name]) for i in slos)}) \
 				for (i, name, slo) in map(lambda x: x.split(','), benchmarks))
 
-def delphi3(benchmarks, version, classes):
-	def bad_pairing(not_quiets, num_quiets, qos):
-		def draw_app(probability, not_quiets, class1):
+def delphi4(benchmarks, version, classes):
+	def bad_pairing(is_last, not_quiets, num_quiets, qos):
+		def draw_app(classes_to_empty, probability, not_quiets, class1):
 			available_classes = list(set([app[1] for app in not_quiets]))
+			if not available_classes: return None
 			if class1: prob = [probability[class1][x] for x in available_classes]
-			else: prob = [1 - probability[x][(0, 0)] for x in available_classes]
+			else:
+				available_classes = list(filter(lambda x: x in classes_to_empty, available_classes))
+				if not available_classes: return None
+				prob = [1 - probability[x][(0, 0)] for x in available_classes]
 			picked_class = random.choices(available_classes, prob)[0]
 			apps_at_class = list(filter(lambda x: x[1] == picked_class, not_quiets))
 			return random.choice(apps_at_class)
 
 		pairs = []
 		probability = probabilities[classes][contention_now]
+		classes_to_empty = list(filter(lambda x: 0 in x, probability.keys())) if not is_last else list(probability.keys())
 		while len(not_quiets) > num_quiets:
-			pair1 = draw_app(probability, not_quiets, None)
+			pair1 = draw_app(classes_to_empty, probability, not_quiets, None)
+			if not pair1: return pairs
 			not_quiets.remove(pair1)
-			pair2 = draw_app(probability, not_quiets, pair1[1])
+			pair2 = draw_app(classes_to_empty, probability, not_quiets, pair1[1])
+			if not pair2:
+				not_quiets.append(pair1)
+				return pairs
 			not_quiets.remove(pair2)
 			pairs.append((pair1[0], pair2[0]))
 		return pairs
@@ -192,14 +202,51 @@ def delphi3(benchmarks, version, classes):
 					 list(map(lambda y: (y[0], (y[1]['sens'], y[1]['cont'][qos])), filter(lambda x: x[1]['sens'] + x[1]['cont'][qos] > 0, list(predictions.items()))))))
 
 		if len(quiets) < len(not_quiets):
-			pairs += bad_pairing(not_quiets, len(quiets), qos)
+			pairs += bad_pairing(i == len(slos) - 1, not_quiets, len(quiets), qos)
 	pairs += safe_pairs(quiets, not_quiets)
 	return list(map(lambda x: tuple(map(name_fix, x)), pairs))
+
+"""---------------------- delphi3 Pairing Algorithm - mult SLOs -----------"""
+def delphi3(benchmarks, version, classes):
+	def bad_pairing(combinations, not_quiets, num_quiets, qos):
+		pairs = []
+		for combination in combinations:
+			apps_to_remove = list(filter(lambda x: x[1] == combination, not_quiets))
+			while len(apps_to_remove) > 1:
+				random.shuffle(apps_to_remove)
+				(pair_1, pair_2) = (apps_to_remove.pop(0), apps_to_remove.pop(0))
+				not_quiets.remove(pair_1)
+				not_quiets.remove(pair_2)
+				pairs.append((pair_1[0], pair_2[0]))
+				if len(not_quiets) <= num_quiets: return pairs
+		return pairs
+
+	def safe_pairs(quiets, not_quiets):
+		quiets1 = list(map(lambda x: x[0], quiets[:len(not_quiets)]))
+		quiets2 = list(map(lambda x: x[0], quiets[len(not_quiets):]))
+		not_quiets = list(map(lambda x: x[0], not_quiets))
+		return list(zip(quiets1, not_quiets)) + list(zip(quiets2[:int(len(quiets2) / 2)], quiets2[int(len(quiets2) / 2):]))
+
+	predictions = get_predictions(benchmarks, version, classes)
+	slos = sorted(set(map(lambda x: x['slo'], predictions.values())))
+	order = [(1,0), (0,1), (2,0), (0,2), (2,2), (2,1), (1,2), (1,1)]
+	(not_quiets, pairs) = ([],[])
+	for (i, qos) in enumerate(slos):
+		quiets = list(filter(lambda x: not any([x[0] in y for y in pairs]),
+				 list(map(lambda y: (y[0], (y[1]['sens'], y[1]['cont'][qos])), filter(lambda x: x[1]['sens'] + x[1]['cont'][qos] == 0, list(predictions.items()))))))
+		not_quiets = list(filter(lambda x: not any([x[0] in y for y in pairs]),
+					 list(map(lambda y: (y[0], (y[1]['sens'], y[1]['cont'][qos])), filter(lambda x: x[1]['sens'] + x[1]['cont'][qos] > 0, list(predictions.items()))))))
+
+		if len(quiets) < len(not_quiets):
+			pairs += bad_pairing(order if i + 1 == len(slos) else order[:4], not_quiets, len(quiets), qos)
+	pairs += safe_pairs(quiets, not_quiets)
+	return list(map(lambda x: map(name_fix, x), pairs))
 
 """------------------------- Helper Functions -----------------------------"""
 alg_config = {'random':	[random_pairs,	100, ['r'],      [2]],
 			  'oracle':	[oracle,		1,   ['r', 'p'], [2]],
-			  'delphi':	[delphi3,		100, ['r', 'p'], [2, 3]]}
+			  #'delphi':	[delphi4,		100, ['r', 'p', 'a'], [2, 3]]}
+			  'delphi':	[delphi4,		100, ['r', 'p'], [2, 3]]}
 
 def violations_counter(pairs):
 	violations = 0
@@ -212,32 +259,31 @@ def violations_counter(pairs):
 		violations += int(sd1 > bench1[2]) + int(sd2 > bench2[2])
 	return violations
 	
-def calculate_probabilities(pairings, cl):
-	combinations = list(product(range(cl), repeat=2))
-	paired = {combination: {combination: 0 for combination in combinations} for combination in combinations}
-	for pairs in pairings:
-		predictions = get_predictions([tuple_fix(x) for pair in pairs for x in pair], 'r', cl)
-		for (bench1, bench2) in pairs:
-			(b1, b2) = (tuple_fix(bench1), tuple_fix(bench2))
-			class_of_bench1 = (predictions[b1]['sens'], predictions[b1]['cont'][predictions[b2]['slo']])
-			class_of_bench2 = (predictions[b2]['sens'], predictions[b2]['cont'][predictions[b1]['slo']])
-			paired[class_of_bench1][class_of_bench2] += 1
-
-	pairs_per_class = dict()
-	probability = {combination: {combination: 0 for combination in combinations} for combination in combinations[1:]}
-	for (i, class1) in enumerate(combinations[1:]):
-		other_pairs = [paired[x][class1] for x in paired if x != class1 and x != (0, 0)]
-		pairs_per_class[class1] = sum([paired[class1][x] for x in paired[class1] if x != (0, 0)]) + sum(other_pairs)
-		occurences_0 = paired[class1][(0, 0)] + paired[(0, 0)][class1]
-		total_occurences = float(pairs_per_class[class1] + occurences_0)
-		probability[class1][(0, 0)] = occurences_0 / total_occurences if total_occurences > 0 else 0.0
-		for (j, class2) in enumerate(combinations[1:]):
-			probability[class1][class2] = (paired[class1][class2] + paired[class2][class1] * int(i != j)) / float(pairs_per_class[class1]) if pairs_per_class[class1] > 0 else 0
-	return probability
-
 def get_probabilities_oracle(contentions_to_run):
-	times_to_run = 1000
+	def calculate_probabilities(pairings, cl):
+		combinations = list(product(range(cl), repeat=2))
+		paired = {combination: {combination: 0 for combination in combinations} for combination in combinations}
+		for pairs in pairings:
+			predictions = get_predictions([tuple_fix(x) for pair in pairs for x in pair], 'r', cl)
+			for (bench1, bench2) in pairs:
+				(b1, b2) = (tuple_fix(bench1), tuple_fix(bench2))
+				class_of_bench1 = (predictions[b1]['sens'], predictions[b1]['cont'][predictions[b2]['slo']])
+				class_of_bench2 = (predictions[b2]['sens'], predictions[b2]['cont'][predictions[b1]['slo']])
+				paired[class_of_bench1][class_of_bench2] += 1
 
+		pairs_per_class = dict()
+		probability = {combination: {combination: 0 for combination in combinations} for combination in combinations[1:]}
+		for (i, class1) in enumerate(combinations[1:]):
+			other_pairs = [paired[x][class1] for x in paired if x != class1 and x != (0, 0)]
+			pairs_per_class[class1] = sum([paired[class1][x] for x in paired[class1] if x != (0, 0)]) + sum(other_pairs)
+			occurences_0 = paired[class1][(0, 0)] + paired[(0, 0)][class1]
+			total_occurences = float(pairs_per_class[class1] + occurences_0)
+			probability[class1][(0, 0)] = occurences_0 / total_occurences if total_occurences > 0 else 0.0
+			for (j, class2) in enumerate(combinations[1:]):
+				probability[class1][class2] = (paired[class1][class2] + paired[class2][class1] * int(i != j)) / float(pairs_per_class[class1]) if pairs_per_class[class1] > 0 else 0
+		return probability
+
+	times_to_run = 1000
 	with alive_bar(len(alg_config['delphi'][3]) * len(contentions_to_run) * times_to_run) as bar:
 		for c in alg_config['delphi'][3]:
 			for contention in contentions_to_run:
@@ -262,7 +308,6 @@ def write_dict_to_file(dictionary, filepath):
 def read_dict_from_file(filepath):
 	with open(filepath, 'rb') as f: return pickle.load(f)
 
-
 """------------------------------- Main -----------------------------------"""
 def run_all_algorithms(args):
 	arg_check_pairing(args)
@@ -279,7 +324,7 @@ def run_all_algorithms(args):
 		except:
 			get_probabilities_oracle(contentions_to_run)
 			write_dict_to_file(probabilities, f"{heatmap_dir}probabilities.txt")
-	with alive_bar(times_to_run) as bar:
+	with alive_bar(times_to_run * len(contentions_to_run) * len(qos_ins)) as bar:
 		for i in range(times_to_run):
 			for (contention, qos_in) in list(product(*[contentions_to_run, qos_ins])):
 				global contention_now
@@ -293,14 +338,16 @@ def run_all_algorithms(args):
 					(runs, versions, classes) = alg_config[algo][1:]
 					configs = list(product(*[versions, classes]))
 					for (version, cl) in configs:
-						violations = np.mean([violations_counter(alg_config[algo][0](benchmarks, version, cl)) for i in range(runs)])
+						violations = [violations_counter(alg_config[algo][0](benchmarks, version, cl)) for i in range(runs)]
+						if algo != 'delphi': violations = np.mean(violations)
+						else: violations = min(violations)
 						set_str = setting_str(contention, algo, version, cl)
 						if set_str in results[qos_in]: results[qos_in][set_str].append(violations)
 						else: results[qos_in][set_str] = [violations]
-			bar()
+				bar()
 	for qos in results:
 		resultsT = zip(*[(k, *v) for k, v in results[qos].items()])
-		with open(f"{violations_dir}boxplot-{qos}.csv", 'w', newline='') as csvfile:
+		with open(f"{violations_dir}boxplot-{qos}_1.csv", 'w', newline='') as csvfile:
 			writer = csv.writer(csvfile)
 			writer.writerows(resultsT)
 

@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+import sys
+sys.path.append('../predict/')
 from models_backend import *
 import matplotlib.pyplot as plt
 

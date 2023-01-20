@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import sys
 sys.path.append('../predict/')
-from heatmap import *
+from attackers import *
 
 contentions = ['l', 'm', 'h']
 bench_suites = ['s', 'sp', 'spt'][2]
