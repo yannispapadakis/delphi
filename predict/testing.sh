@@ -14,7 +14,7 @@ for feature in ${features[@]}; do
 			core=$(($class * 5 + $qos))
 			IFS=',' read -r -a models <<< "${models_}"
 			for model in ${models[@]}; do
-				taskset -c $core ./predictor.py test $feature 1.$qos $class $model s,p t
+				./predictor.py test $feature 1.$qos $class $model s,p t
 			done
 		done
 	done

@@ -347,7 +347,7 @@ def run_all_algorithms(args):
 				bar()
 	for qos in results:
 		resultsT = zip(*[(k, *v) for k, v in results[qos].items()])
-		with open(f"{violations_dir}boxplot-{qos}_1.csv", 'w', newline='') as csvfile:
+		with open(f"{violations_dir}boxplot-{qos}.csv", 'w', newline='') as csvfile:
 			writer = csv.writer(csvfile)
 			writer.writerows(resultsT)
 

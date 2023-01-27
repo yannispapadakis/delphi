@@ -27,7 +27,7 @@ def box_plot_classvsclass(qos, class_):
 	
 	df = pd.concat(dataframes)
 	df = df.pivot(columns = 'Class', values = 'sd')
-	bp = df.boxplot(grid = False, figsize = (20, 10), patch_artist = True,
+	bp = df.boxplot(grid = False, figsize = (20, int(class_ == 3) * 2.5 + 7.5), patch_artist = True,
 					rot = (0 if class_ == 2 else 90), return_type = 'both')
 	labels = {2: ['Insensitive -\nNon-Contentious', 'Insensitive -\nContentious', \
 				  'Sensitive -\nNon-Contentious', 'Sensitive -\nContentious'],
@@ -38,7 +38,7 @@ def box_plot_classvsclass(qos, class_):
 	color2 = 'silver'
 	lw = 3
 	fontsize = 36
-	(y_bottom, y_top, y_interval) = (1.0, 3.0, qos - 1.0)
+	(y_bottom, y_top, y_interval) = (1.0, min(2.4,float(class_)), qos - 1.0)
 
 	bp[0].set_xticklabels(labels[class_])
 	bp[0].set_yticks(np.arange(y_bottom, y_top, y_interval))
@@ -58,7 +58,7 @@ def box_plot_classvsclass(qos, class_):
 	plt.axhline(y = qos, color = 'firebrick', linewidth = lw + 1, zorder = 4)
 	plt.suptitle('')
 	plt.tight_layout()
-	plt.savefig(f"{results_dir}ClassVClass_{class_}_{qos}.png")
+	plt.savefig(f"{results_dir}graphs/classVclass/ClassVClass_{class_}_{qos}.png")
 	plt.clf()
 
 if __name__ == '__main__':

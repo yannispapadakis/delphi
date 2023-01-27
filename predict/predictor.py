@@ -2,7 +2,7 @@
 from models_backend import *
 
 tool = 'perf'
-fold = 8
+fold = 5
 
 def prediction(args):
 	(func, feature, qos, class_num, model, train, test) = args

@@ -17,11 +17,6 @@ def all_violations_boxplots(args):
 		for slo in map(lambda x: x.split('-')[1].split('.csv')[0], filter(lambda x: 'boxplot' in x, os.listdir(f"{violations_dir}"))):
 			violations_boxplot(slo)
 
-def modify_df(df):
-	columns = df.columns[df.columns.str.contains('m_delphi')]
-	df.loc[:, columns] = df.loc[:, columns] - 1
-	return df
-
 def violations_boxplot(slo):
 	def column_rename(columns):
 		lookup = {'random': 'Random', 'oracle': 'Heatmap', 'whisker': 'Whisker', 'delphi': '', 'delphi3': 'N', \
@@ -29,7 +24,7 @@ def violations_boxplot(slo):
 		renamed_columns = dict()
 		for column in columns:
 			tokens = column.split('_')
-			new_name =	f"{lookup[tokens[3]][int('delphi' not in tokens[1])]} " + \
+			new_name =	f"{lookup[tokens[3]][int('delphi' not in tokens[1] or 'a' in tokens[2])]} " + \
 						f"{lookup[tokens[2]][int('delphi' not in tokens[1]) + int(tokens[1] == 'random' or tokens[1] == 'whisker')]} " + \
 						f"{lookup[tokens[1]]}"
 			renamed_columns[column] = new_name.strip()
@@ -37,7 +32,6 @@ def violations_boxplot(slo):
 
 	with open(f"{violations_dir}boxplot-{slo}.csv", 'r') as violations_file:
 		df = pd.read_csv(violations_file, delimiter = ',')
-	#df = modify_df(df)
 	df = df.rename(columns = column_rename(df.columns))
 	bp = df.boxplot(figsize = (21,15), return_type = 'both', rot = 90, patch_artist=True)
 
@@ -46,7 +40,9 @@ def violations_boxplot(slo):
 	linewidth = 2
 	fontsize = 32
 	(y_bottom, y_top) = (0.0, 30.0)
-	plt.ylim(bottom = y_bottom, top = y_top)
+	if str(slo) == '1.1': plt.ylim(bottom = y_bottom)
+	elif str(slo) == '1.2': plt.ylim(bottom = y_bottom, top = y_top - 3.0)
+	elif str(slo) == 'all': plt.ylim(bottom = y_bottom, top = y_top)
 	#bp[0].set_xticklabels(labels)
 	#plt.yticks(np.arange(0.0, 22.6 if sla < 1.3 else 27.6, 2.5))
 	for (patch, color, edgec) in zip(bp[1]['boxes'], colors, edgecs):
@@ -63,14 +59,25 @@ def violations_boxplot(slo):
 	plt.ylabel('Violations', fontsize = fontsize + 10)
 
 	syst = '     Delphi     '
-	yhook = -14.50
+	yhook = -13.50
+	if str(slo) == '1.2': yhook += 2.0
 	props = dict(boxstyle = 'round', facecolor = 'white', edgecolor = 'black', alpha = 0.5, linewidth = linewidth + 0.5)
-	plt.text(((len(set(df.columns)) * 2 - 3) / 2), yhook, syst, fontsize = fontsize - 2, ha='center', va = 'center', bbox = props)
-	plt.text(((len(set(df.columns)) * 4 - 3) / 2), yhook, syst, fontsize = fontsize - 2, ha='center', va = 'center', bbox = props)
-	plt.text(((len(set(df.columns)) * 6 - 3) / 2), yhook, syst, fontsize = fontsize - 2, ha='center', va = 'center', bbox = props)
+	def get_x(df, position): return ((len(set(df.columns)) * position - 3) / 2)
+	plt.text(get_x(df, 2), yhook, syst, fontsize = fontsize - 2, ha='center', va = 'center', bbox = props)
+	plt.text(get_x(df, 4), yhook, syst, fontsize = fontsize - 2, ha='center', va = 'center', bbox = props)
+	plt.text(get_x(df, 6), yhook, syst, fontsize = fontsize - 2, ha='center', va = 'center', bbox = props)
+	y_box = 0.2
+	dboxl = FancyBboxPatch((get_x(df, 2) - 1.75, y_box), 3.6, 10, boxstyle="round,pad=0.2",fc = 'grey', ec = 'black', zorder = -1, alpha = 0.1)
+	yoffset = 2.5
+	dboxm = FancyBboxPatch((get_x(df, 4) - 1.75, y_box + yoffset), 3.6, 15.5 - 3 * int('1.2' in str(slo)), boxstyle="round,pad=0.2",fc = 'grey', ec = 'black', zorder = -1, alpha = 0.1)
+	yoffset += 2.5 if '1.2' not in str(slo) else 0.0
+	dboxh = FancyBboxPatch((get_x(df, 6) - 1.75, y_box + yoffset), 3.6, 15, boxstyle="round,pad=0.2",fc = 'grey', ec = 'black', zorder = -1, alpha = 0.1)
+	bp[0].add_patch(dboxl)
+	bp[0].add_patch(dboxm)
+	bp[0].add_patch(dboxh)
 
 	y1, y2 = plt.ylim()
-	xanchor = len(set(df.columns))
+	xanchor = len(set(df.columns)) - 0.40
 	yanchor = y2 - 1.6
 	box_size = 0.5
 	interval = 0.1

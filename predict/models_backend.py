@@ -109,6 +109,7 @@ def get_data_name(feature, cl, mod, qos, func):
 	return feature + str(cl) + modd + str(qos) + func
 
 def run_model(answers, feature, cl, qos, model, func):
+	start_train = time.perf_counter()
 	train_data = pd.read_csv(temp_dir + get_data_name(feature, cl, model, qos, func) + '0.csv')
 	test_data = pd.read_csv(temp_dir + get_data_name(feature, cl, model, qos, func) + '1.csv')
 
@@ -130,8 +131,10 @@ def run_model(answers, feature, cl, qos, model, func):
 		model.fit(train_scaled, y_train)
 	except ValueError:
 		return 0
-
+	end_train = time.perf_counter()
 	test_pred = model.predict(test_scaled)
+	end_test = time.perf_counter()
+	#print(f"Training: {(end_train - start_train):.6f}, Testing: {(end_test - end_train):.6f}")
 	acc_score = model.score(test_scaled, y_test)
 
 	for i in range(len(test_names)):
