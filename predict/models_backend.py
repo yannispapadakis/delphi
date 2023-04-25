@@ -113,8 +113,9 @@ def run_model(answers, feature, cl, qos, model, func):
 	train_data = pd.read_csv(temp_dir + get_data_name(feature, cl, model, qos, func) + '0.csv')
 	test_data = pd.read_csv(temp_dir + get_data_name(feature, cl, model, qos, func) + '1.csv')
 
-	if feature == 'cont': remove_cols = [0, 2, 3, 4, 5, 6, 8, 15]
-	if feature == 'sens': remove_cols = [0, 8, 13, 15]
+	#if feature == 'cont': remove_cols = [0, 2, 3, 4, 5, 6, 8, 15]
+	#if feature == 'sens': remove_cols = [0, 8, 13, 15]
+	remove_cols = [0, 8, 22, 29]
 	train = train_data.drop(train_data.columns[remove_cols], axis = 1)
 	test = test_data.drop(test_data.columns[remove_cols], axis = 1)
 

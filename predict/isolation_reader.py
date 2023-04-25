@@ -38,7 +38,7 @@ def read_perf_file(filename, directory, run_periods, version = ''):
 			if tokens[0] == '#' or '<not' in tokens or 'counted>' in tokens:
 				if tokens[1] == 'started':
 					start_t = datetime.datetime.strptime(' '.join(tokens[4:]), "%b %d %H:%M:%S %Y") - datetime.timedelta(hours=2)
-					#if filename.startswith('parsec'): start_t = start_t - datetime.timedelta(hours=2)
+					start_t += datetime.timedelta(hours= 2 * int(filename.startswith('4')) - 1 * int(filename.startswith('tailbench')))
 					start_t = int(start_t.strftime("%s"))
 				line = perf_f.readline()
 				continue
@@ -65,9 +65,11 @@ def apply_mean(all_measures):
 	for bench in all_measures:
 		if bench == 'Title': continue
 		measures = all_measures[bench]
-		for event in measures:
-			measures[event] = np.mean(list(measures[event]))
-			#measures[event] = gmean(list(filter(lambda x: x > 0, measures[event])))
+		events = list(measures.keys())
+		for event in events:
+			event_list = list(measures[event])
+			measures[event] = np.mean(event_list)
+			measures[event + '_STD'] = np.std(event_list)
 
 def perf_to_csv(measures, name):
 	out_file = open(isolation_dir + 'perf/csv_files/' + csv_dir + name + '_perf.csv', 'w')
@@ -77,10 +79,8 @@ def perf_to_csv(measures, name):
 	for i in range(max(map(len, list(measures.values())))):
 		row = []
 		for key in events:
-			try:
-				row.append(str(measures[key][i]))
-			except:
-				row.append('')
+			try: row.append(str(measures[key][i]))
+			except: row.append('')
 		writer.writerow(row)
 	out_file.close()
 
