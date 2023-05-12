@@ -115,7 +115,6 @@ def delphi(benchmarks, version, classes):
 		for f in features:
 			with open(get_model(f, classes, qos), mode='r') as pred:
 				predictions[f] = dict((rows[0], rows[1 + int(version == 'r')]) for rows in csv.reader(pred, delimiter='\t') if rows[0] != 'Bench' and rows[0] != 'Accuracy')
-				pred.close()
 		return dict((x, (int(predictions['sens'][x.split(',')[1]]), int(predictions['cont'][x.split(',')[1]]))) for x in benchmarks)
 
 	def get_attacker(benchmarks):

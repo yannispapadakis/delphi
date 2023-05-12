@@ -127,7 +127,8 @@ def verify_empty_host(host):
 		logger.info(str(len(pids)) + " ssh connection(s) found on host: " + host + " ...clearing...")
 		kill_spec(host)
 		kill_parsec(host)
-		kill_tailbench()
+		kill_tailbench('client-1')
+		kill_tailbench('client-2')
 		pids = ssh_command_pid(host)
 
 def run_benchmarks(benchmarks, port):

@@ -106,7 +106,9 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO,
 logging.Formatter.converter = time.gmtime
 logger = logging.getLogger("executor")
 
-vm_messages_monitor = None
+#vm_messages_monitor = None
+PORT = 8081
+vm_messages_monitor = VmMessagesMonitor(port=PORT)
 
 def signal_handler(signum, frame):
 	logger.info("-> Caught a signal, exiting...")
