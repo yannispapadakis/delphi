@@ -21,7 +21,7 @@ def benchmarks_list(qos, classes):
 		classes[row[0]] = (int(classes[row[0]]), int(row[-1]))
 	groups = dict()
 	for (bench, class_) in classes.items():
-		if bench.endswith('8'): continue
+		if bench.endswith('1'): continue
 		index = min(sum(class_), 2)
 		if index in groups:
 			groups[index].append(bench)

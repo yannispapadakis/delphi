@@ -5,7 +5,7 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 	fp = open(filename)
 	excluded = []
 	line = fp.readline()
-	limit_hb = [0, 0]
+	limit_hb = []
 	while line:
 		tokens = line.split(" - ")
 		if "EVENT" in line:
@@ -21,6 +21,7 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 				event_epoch = int(event_time.strftime("%s"))
 
 				vm_seq_num = json_data['vm_seq_num']
+				if len(limit_hb) <= vm_seq_num: limit_hb.append(0)
 				gold_vms.append(vm_seq_num)
 				if vm_seq_num in excluded:
 					line=fp.readline()
@@ -35,7 +36,8 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 					vm_output[vm_seq_num] = []
 					filename_backup = filename
 					filename = filename.replace("img-dnn", "imgdnn").replace("tailbench.", "")
-					vms_vcpus[vm_seq_num] = int(filename.split('/')[-1].split('.')[0].split('-')[vm_seq_num][-1])
+					try: vms_vcpus[vm_seq_num] = int(filename.split('/')[-1].split('.')[0].split('-')[vm_seq_num][-1])
+					except: vms_vcpus[vm_seq_num] = 2
 					filename = filename_backup
 				elif event_type == "shutdown":
 					limit_hb[vm_seq_num] = 1
@@ -90,7 +92,7 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 					elif "tailbench" in bench:
 						tail_name = bench.replace("img-dnn", "imgdnn").split('-')[0].replace("imgdnn", "img-dnn")
 						base_perf = benches_vcpus[tail_name]['p95' if p95 else 'p99'][vcpus]
-						latency = float(output_lines[1].split(' | ')[1 - int(p95)].split()[1])
+						latency = float(output_lines[1].split(' | ')[2 - int(p95)].split()[1])
 						vm_output[vm_seq_num].append(latency)
 						perf = latency / base_perf
 					if perf == 0:

@@ -4,10 +4,12 @@ from heatmap_run import *
 def multiple_run(benchmarks, port):
 	hosts = dict()
 	pids = dict()
+	vms_vcpus = {2: 1, 4: 1}
 	tails = 0
 	for (i, benchmark) in enumerate(benchmarks):
 		vcpus = int(benchmark['nr_vcpus'])
-		host = 'vm' + str(i + 1) + '-2'
+		host = 'vm' + str(vms_vcpus[vcpus]) + '-' + str(vcpus)
+		vms_vcpus[vcpus] += 1
 		hosts[i] = host
 		commands = get_vm_commands(i, benchmark, port, vm_ips[host])
 		verify_empty_host(host)
@@ -25,7 +27,7 @@ def multiple_run(benchmarks, port):
 			ssh_command = "ssh " + host + " \'" + commands + "\' &"
 			os.system(ssh_command)
 			pids[host] = (i, ssh_command_pid(host))
-	
+
 	completed = []
 	finished = []
 	while len(completed) < len(benchmarks):
@@ -65,7 +67,6 @@ def run_m_benchmarks_1vcpu_support_incomplete(benchmarks, port):
 
 if __name__ == "__main__":
 	PORT = 8081
-	#vm_messages_monitor = VmMessagesMonitor(port=PORT)
 	vm_messages_monitor.spawn_monitor_thread()
 	signal.signal(signal.SIGTERM, signal_handler)
 	signal.signal(signal.SIGINT, signal_handler)
