@@ -68,18 +68,17 @@ def clean(filename):
 		os.rename(dir_ + filename, dest + filename)
 	else:
 		fn_fix = filename.replace('img-dnn', 'imgdnn')
-		try:
-			(b1, v1, b2, v2) = [y for x in list(map(lambda x: x.split('_'), fn_fix.split('.txt')[0].split('-'))) for y in x]
-			(b1, b2) = (b1.replace('imgdnn', 'img-dnn'), b2.replace('imgdnn', 'img-dnn'))
-			dest = coexecutions_dir + b1 + '/' + v1 + 'vs' + v2 + '/'
-			if not v1.isdigit(): dest = dir_
-		except:
+		if len(fn_fix.split('-')) > 2: dest = dir_
+		else:
 			try:
+				(b1, v1, b2, v2) = [y for x in list(map(lambda x: x.split('_'), fn_fix.split('.txt')[0].split('-'))) for y in x]
+				(b1, b2) = (b1.replace('imgdnn', 'img-dnn'), b2.replace('imgdnn', 'img-dnn'))
+				dest = coexecutions_dir + b1 + '/' + v1 + 'vs' + v2 + '/'
+				if not v1.isdigit(): dest = dir_
+			except:
 				tool = fn_fix.split('.txt')[0].split('-')[1]
 				if tool.startswith('p'): dest = isolation_dir + tool + '/outputs/'
 				else: dest = isolation_dir + 'attackers/'
-			except:
-				dest = dir_
 		os.rename(dir_ + filename, dest + filename)
 		if filename in os.listdir(results_dir + 'trash/'): os.remove(results_dir + 'trash/' + filename)
 

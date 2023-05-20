@@ -17,7 +17,7 @@ def parse_prediction(args):
 	y_true = list(map(lambda x: x[1], predictions.values()))
 	metrics_ = metrics.classification_report(y_true, y_pred, digits=4, zero_division = 0, output_dict = True)
 	with open(f"{gridsearch_dir}{feat}_{classes}_{qos}_{benches}.txt", 'r') as acc_fd:
-		acc_d = {x[0]: float(x[-2]) for x in csv.reader(acc_fd, delimiter = '\t')}
+		acc_d = {x[0]: float(x[-2]) for x in csv.reader(acc_fd, delimiter = '\t') if x[0] == model}
 	return {'accuracy': metrics_['accuracy'], 'f1-score': metrics_[avg_mode + ' avg']['f1-score'],
 			'precision': metrics_[avg_mode + ' avg']['precision'], 'recall': metrics_[avg_mode + ' avg']['recall']}
 	#return {'accuracy': acc_d[model], 'f1-score': metrics_[avg_mode + ' avg']['f1-score'],

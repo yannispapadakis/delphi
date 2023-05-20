@@ -15,27 +15,32 @@ def get_heatmap(benchmarks, version):
 			except: window[bench1][bench2] = 0
 	return window
 
-def violations_counter(bins, preds, alg):
-	def name(b): return b.split(',')[1]
-	def slo(b): return float(b.split(',')[-1])
+def execute_group(b):
+	f = ''.join([f"{name(x)[:-2]}_{vcpus(x)}-" for x in b])[:-1] + '.txt'
+	if f not in os.listdir(f"{results_dir}{len(b)}ads/"):
+		command = f"/home/ypap/delphi/executions/new_exec.sh" + ''.join([f" {name(x)[:-2]} {vcpus(x)}" for x in b])
+		os.system(command)
+	total_measures = parse_files(f"{results_dir}{len(b)}ads/")
+	print(''.join([f"{b[i]}{' ' * (27 - len(b[i]))}{total_measures[f]['vm_mean_perf'][i]:.2f} | " for i in range(len(b))]))
+	return sum([int(total_measures[f]['vm_mean_perf'][i] > slo(b[i])) for i in range(len(b))])
+
+def violations_counter(bins, preds):
 	violations = 0
+	triplets = 0
 	for b in bins:
-		if alg == 'delphi':
-			tuples = list(map(lambda x: (x[1], x[2]), senscont(b,preds)))
-			if len(b) == 1: print(f"{tuples[0]} {b[0]}")
-			if len(b) == 2:
-				violations += int(heatmap[name(b[0])][name(b[1])] > slo(b[0])) + int(heatmap[name(b[1])][name(b[0])] > slo(b[1]))
-				print(f"{tuples[0]} {b[0]}{' '*(27 - len(b[0]))}{tuples[1]} {b[1]}{' ' * (27 - len(b[1]))}{heatmap[name(b[0])][name(b[1])]:.2f} - {heatmap[name(b[1])][name(b[0])]:.2f}  {violations}")
-			if len(b) >= 3:
-				#run the benchmarks
-				print(len(b), b)
-		else:
-			if len(b) == 1: print(f"{b[0]}")
-			if len(b) == 2:
-				violations += int(heatmap[name(b[0])][name(b[1])] > slo(b[0])) + int(heatmap[name(b[1])][name(b[0])] > slo(b[1]))
-				print(f"{b[0]}{' '*(27 - len(b[0]))}{b[1]}{' ' * (27 - len(b[1]))}{heatmap[name(b[0])][name(b[1])]:.2f} - {heatmap[name(b[1])][name(b[0])]:.2f}  {violations}")
-			if len(b) >= 3: print(len(b), b)
-	print(f"Bins used: {len(bins)} with {violations} violations")
+		if len(b) == 1:
+			p = (preds[b[0]]['sens'], sum(preds[b[0]]['cont'].values()))
+		#	print(f"{p} {b[0]}{' ' * (27 - len(b[0]))}running alone")
+		if len(b) == 2:
+			p0 = (preds[b[0]]['sens'], sum(preds[b[0]]['cont'].values()))
+			p1 = (preds[b[1]]['sens'], sum(preds[b[1]]['cont'].values()))
+			violations += int(heatmap[name(b[0])][name(b[1])] > slo(b[0])) + int(heatmap[name(b[1])][name(b[0])] > slo(b[1]))
+		#	print(f"{p0} {b[0]}{' '*(27 - len(b[0]))}{p1} {b[1]}{' ' * (27 - len(b[1]))}{heatmap[name(b[0])][name(b[1])]:.2f} - {heatmap[name(b[1])][name(b[0])]:.2f}  {violations}")
+		if len(b) >= 3:
+			triplets += 1
+			#print(''.join([f"{(preds[x]['sens'], sum(preds[x]['cont'].values()))} {x}{' ' * (27 - len(x))}" for x in b]))
+			violations += execute_group(b)
+	return (bins, violations, triplets)
 
 def slowdown(benchmarks, heatmap):
 	# Pythia implementation here
@@ -43,73 +48,109 @@ def slowdown(benchmarks, heatmap):
 
 def tuples(benchmarks, preds):
 	return list(map(lambda x: (x, (preds[x]['sens'], sum([preds[y]['cont'][preds[x]['slo']] for y in set(benchmarks).difference([x])]))), benchmarks))
+def ctuples(benchmarks, preds):
+	return list(map(lambda x: (x, (preds[x]['sens'], sum(preds[x]['cont'].values()))), benchmarks))
 
-def senscont(benchmarks, preds): return list(map(lambda x: (x, preds[x]['sens'], preds[x]['cont'][1.2]), benchmarks))
-	
 def vcpus(benchmark): return int(benchmark.split(',')[1][-1])
+def name(b): return b.split(',')[1]
+def slo(b): return float(b.split(',')[-1])
+def setting_str(algorithm, version, cl, mode): return f"{algorithm}_{version}_{cl}_{mode}"
 
 sens_factor = 2
-c = 2
 def cs_sum(b):
 	def s_sum(b): return sens_factor * sum([y[1][0] for y in b])
 	def c_sum(b): return sum([y[1][1] for y in b])
 	return (s_sum(b), c_sum(b))
 
-def find_fitting_bins(benchmark, bins, alg, preds):
+def find_fitting_bins(benchmark, bins, alg, preds, cl, mode):
 	vcpus_fit = list(filter(lambda x: vcpus(benchmark) + sum(map(vcpus, x)) <= MAX_VCPUS, bins))
-	if vcpus_fit == []: 
-		bins.append([benchmark])
+	if vcpus_fit == []: bins.append([benchmark])
 	else:
-		if alg == 'heatmap':
+		if alg == 'oracle':
 			sd_bins = [slowdown(b + [benchmark], preds) for b in vcpus_fit]
 			best_fit = list(filter(lambda x: all([y[1] > 0 for y in x]), sd_bins))
-			if best_fit == []:
-				bins.append([benchmark])
+			if best_fit == []: bins.append([benchmark])
 			else:
 				best_bin = min(best_fit, key = lambda x: min([y[1] for y in x]))
 				bins[bins.index([x[0] for x in best_bin if x[0] != benchmark])].append(benchmark)
 		if alg == 'delphi':
-			t_bins = [tuples(b + [benchmark], preds) for b in vcpus_fit]
-			best_fit = list(filter(lambda x: all([0 in y[1] for y in x]), t_bins))
-			if best_fit == []:
-				bins.append([benchmark])
-			else:
-				sum_filter = list(filter(lambda x: (c == 2 and len(x) == 2) or all([y < len(x) + c - 2 for y in cs_sum(x)]), best_fit))
-				if sum_filter == []:
-					bins.append([benchmark])
+			if mode == 'r':
+				t_bins = [tuples(b + [benchmark], preds) for b in vcpus_fit]
+				best_fit = list(filter(lambda x: all([0 in y[1] for y in x]), t_bins))
+				if best_fit == []: bins.append([benchmark])
 				else:
-					min_length = min(len(b) for b in sum_filter)
-					min_len = list(filter(lambda x: len(x) == min_length, sum_filter))
+					sum_filter = list(filter(lambda x: (cl == 2 and len(x) == 2) or all([y < len(x) + cl - 2 for y in cs_sum(x)]), best_fit))
+					if sum_filter == []: bins.append([benchmark])
+					else:
+						min_length = min(len(b) for b in sum_filter)
+						min_len = list(filter(lambda x: len(x) == min_length, sum_filter))
+						best_bin = max(min_len, key = lambda x: sum(cs_sum(x)))
+						bins[bins.index([x[0] for x in best_bin if x[0] != benchmark])].append(benchmark)
+			if mode == 'c':
+				t_bins = [ctuples(b + [benchmark], preds) for b in vcpus_fit]
+				best_fit = list(filter(lambda x: list(map(lambda y: y[1], x)).count((0, 0)) >= len(x) - 1, t_bins))
+				if best_fit == []: bins.append([benchmark])
+				else:
+					min_length = min(len(b) for b in best_fit)
+					min_len = list(filter(lambda x: len(x) == min_length, best_fit))
 					best_bin = max(min_len, key = lambda x: sum(cs_sum(x)))
 					bins[bins.index([x[0] for x in best_bin if x[0] != benchmark])].append(benchmark)
 		if alg == 'random':			
 			bins[bins.index(max(vcpus_fit, key = lambda x: sum(map(vcpus,x))))].append(benchmark)
 
-def best_fit_bin_packing(benchmarks, alg):
+def best_fit_bin_packing(benchmarks, alg, version, cl, mode):
 	benchmarks = sorted(benchmarks, key = vcpus, reverse = True)
 	preds = []
-	if alg == 'heatmap':
-		preds = get_heatmap(benchmarks, 'r')
+	if alg == 'oracle':
+		preds = get_heatmap(benchmarks, version)
 		benchmarks = sorted(benchmarks, key = lambda x: np.mean(list(preds[x].values())), reverse = True)
 	elif alg == 'delphi':
-		preds = get_predictions(benchmarks, 'r', 2)
+		preds = get_predictions(benchmarks, version, cl)
 		benchmarks = sorted(benchmarks, key = lambda x: (preds[x]['sens'], sum(preds[x]['cont'].values())), reverse = True)
 	bins = []
-	for (i, benchmark) in enumerate(benchmarks):
-		find_fitting_bins(benchmark, bins, alg, preds)
-	violations_counter(bins, preds, alg)
+	for (i, benchmark) in enumerate(benchmarks): find_fitting_bins(benchmark, bins, alg, preds, cl, mode)
+	return bins
+
+alg_config = {'random': [['r'], [2], ['c']],
+			  'oracle': [['r', 'p'], [2], ['c']],
+			  'delphi': [['r', 'p', 'a'], [2, 3], ['c', 'r']]}
 
 def calculate_bins(args):
-	arg_check_bp(args)
-	(contention, size, qos_in, classes_workload) = ('m', 100, '1.2', 2)
-	#benchmarks = generate_workload(contention, size, qos_in, classes_workload, printed)
-	with open(workload_filename(contention, size, qos_in), 'r') as workload_fd:
-		bench_list = [row for row in csv.reader(workload_fd)]
-	benchmarks = list(set([f"{i},{row[0]},{row[1]}" for (i, row) in enumerate(bench_list)]))
-	best_fit_bin_packing(benchmarks, args[1])
+	arg_check_pairing(args)
+	algorithms_to_run = alg_config if args[1] == 'all' else args[1].split(',')
+	times_to_run = int(args[2])
+	contentions_to_run = args[3].split(',') if len(args) >= 4 else contentions
+	qos_ins = list(map(float, filter(lambda x: '.' in x, args[4].split(',')))) + \
+			  list(filter(lambda x: 'all' in x, args[4].split(','))) if len(args) >= 5 else all_slos
+	contentions_to_run = ['l']
+	qos_ins = [1.2]
+	results = dict((qos, dict()) for qos in qos_ins)
 
-def arg_check_bp(args):
-	if args[1] not in ['heatmap', 'delphi', 'random']: sys.exit(1)
+	size = 100
+	for i in range(times_to_run):
+		for (contention, qos_in) in list(product(*[contentions_to_run, qos_ins])):
+			#benchmarks = generate_workload(contention, size, qos_in, classes_workload, printed = times_to_run == 1)
+			with open(workload_filename(contention, size, qos_in), 'r') as workload_fd:
+				bench_list = [row for row in csv.reader(workload_fd)]
+			benchmarks = list(set([f"{i},{row[0]},{row[1]}" for (i, row) in enumerate(bench_list)]))
+			for algo in algorithms_to_run:
+				configs = list(product(*alg_config[algo]))
+				for (version, cl, mode) in configs:
+					if version == 'a' and cl == 3: continue
+					(bins, violations, triplets) = violations_counter(best_fit_bin_packing(benchmarks, algo, version, cl, mode), get_predictions(benchmarks, 'r', cl))
+					print(f"{algo}{' ' * (10 - len(algo))}{version} | {cl} | {mode}: Bins = {len(bins)} with {violations} violations and {triplets} triplets")
+					set_str = setting_str(algo, version, cl, mode)
+					if set_str in results[qos_in]: results[qos_in][set_str].append((len(bins), violations))
+					else: results[qos_in][set_str] = [(len(bins), violations)]
+	for qos in results:
+		try: new_file = os.stat(f"{violations_dir}boxplot-{qos}.csv").st_size == 0
+		except: new_file = True
+		with open(f"{violations_dir}boxplot-{qos}.csv", 'a', newline='') as csvfile:
+			writer = csv.writer(csvfile)
+			if new_file: writer.writerow(['algo', 'bins', 'violations'])
+			for x in results[qos]:
+				name = x if not x.startswith('delphi_a') else 'attackers_r'
+				writer.writerow([name, results[qos][x][0][0], results[qos][x][0][1]])
 
 if __name__ == '__main__':
 	calculate_bins(sys.argv)
