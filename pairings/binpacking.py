@@ -15,6 +15,33 @@ def get_heatmap(benchmarks, version):
 			except: window[bench1][bench2] = 0
 	return window
 
+def group_results(n, preds):
+	total_measures = parse_files(f"/home/ypap/delphi/results/{n}ads/")
+	results = dict()
+
+	for f in total_measures.keys():
+		f = f.replace('img-dnn', 'imgdnn')
+		benches = list(map(lambda x: x.replace('_', '-'), f.split('.txt')[0].split('-')))
+		benches = list(map(lambda x: x.replace('imgdnn', 'img-dnn'), benches))
+		f = f.replace('imgdnn', 'img-dnn')
+		perfs = total_measures[f]['vm_mean_perf']
+		batch_pred = str(sorted(list(map(lambda x: preds[x], benches))))
+		for (i, bench) in enumerate(benches):
+			pred = str(preds[bench])
+			if pred not in results: results[pred] = {batch_pred: [perfs[i]]}
+			else:
+				if batch_pred not in results[pred]: results[pred][batch_pred] = [perfs[i]]
+				else: results[pred][batch_pred].append(perfs[i])
+	return results
+
+def probabilities(triple, cl, preds, results):
+	violations = []
+	for bench in triple:
+		runs = results[str(preds[bench])][str(sorted(list(map(lambda x: preds[x], triple))))]
+		prob = 100 * len(list(filter(lambda x: x < 1.2, runs))) / float(len(runs))
+		violations.append(random.choices([0, 1], weights = [prob, 100 - prob], k = 1)[0])
+	return sum(violations)
+
 def execute_group(b):
 	f = ''.join([f"{name(x)[:-2]}_{vcpus(x)}-" for x in b])[:-1] + '.txt'
 	if f not in os.listdir(f"{results_dir}{len(b)}ads/"):
@@ -24,9 +51,14 @@ def execute_group(b):
 	print(''.join([f"{b[i]}{' ' * (27 - len(b[i]))}{total_measures[f]['vm_mean_perf'][i]:.2f} | " for i in range(len(b))]))
 	return sum([int(total_measures[f]['vm_mean_perf'][i] > slo(b[i])) for i in range(len(b))])
 
-def violations_counter(bins, preds):
-	violations = 0
-	triplets = 0
+def violations_counter(bins, cl, preds, simulation):
+	predictions = dict()
+	for f in features:
+		with open(get_model(f, cl, 1.2), mode = 'r') as pred_f:
+			predictions[f] = dict((rows[0], rows[2]) for rows in csv.reader(pred_f, delimiter='\t') if rows[0] != 'Bench' and rows[0] != 'Accuracy')
+	preds_tuple = dict((x, (int(predictions['sens'][x]), int(predictions['cont'][x]))) for x in predictions['sens'].keys())
+	results = group_results(3, preds_tuple)
+	(violations, triplets) = (0, 0)
 	for b in bins:
 		if len(b) == 1:
 			p = (preds[b[0]]['sens'], sum(preds[b[0]]['cont'].values()))
@@ -39,7 +71,8 @@ def violations_counter(bins, preds):
 		if len(b) >= 3:
 			triplets += 1
 			#print(''.join([f"{(preds[x]['sens'], sum(preds[x]['cont'].values()))} {x}{' ' * (27 - len(x))}" for x in b]))
-			violations += execute_group(b)
+			if simulation: violations += probabilities(list(map(name, b)), cl, preds_tuple, results)
+			else: violations += execute_group(b)
 	return (bins, violations, triplets)
 
 def slowdown(benchmarks, heatmap):
@@ -116,14 +149,16 @@ alg_config = {'random': [['r'], [2], ['c']],
 			  'delphi': [['r', 'p', 'a'], [2, 3], ['c', 'r']]}
 
 def calculate_bins(args):
-	arg_check_pairing(args)
+	arg_check_binpacking(args)
 	algorithms_to_run = alg_config if args[1] == 'all' else args[1].split(',')
-	times_to_run = int(args[2])
-	contentions_to_run = args[3].split(',') if len(args) >= 4 else contentions
-	qos_ins = list(map(float, filter(lambda x: '.' in x, args[4].split(',')))) + \
-			  list(filter(lambda x: 'all' in x, args[4].split(','))) if len(args) >= 5 else all_slos
+	#times_to_run = int(args[2])
+	#contentions_to_run = args[3].split(',') if len(args) >= 4 else contentions
+	#qos_ins = list(map(float, filter(lambda x: '.' in x, args[4].split(',')))) + \
+	#		  list(filter(lambda x: 'all' in x, args[4].split(','))) if len(args) >= 5 else all_slos
+	times_to_run = 1
 	contentions_to_run = ['l']
 	qos_ins = [1.2]
+	simulation = args[2] == 's'
 	results = dict((qos, dict()) for qos in qos_ins)
 
 	size = 100
@@ -137,8 +172,8 @@ def calculate_bins(args):
 				configs = list(product(*alg_config[algo]))
 				for (version, cl, mode) in configs:
 					if version == 'a' and cl == 3: continue
-					(bins, violations, triplets) = violations_counter(best_fit_bin_packing(benchmarks, algo, version, cl, mode), get_predictions(benchmarks, 'r', cl))
-					print(f"{algo}{' ' * (10 - len(algo))}{version} | {cl} | {mode}: Bins = {len(bins)} with {violations} violations and {triplets} triplets")
+					(bins, violations, t) = violations_counter(best_fit_bin_packing(benchmarks, algo, version, cl, mode), cl, get_predictions(benchmarks, 'r', cl), simulation)
+					print(f"{algo}{' ' * (10 - len(algo))}{version} | {cl} | {mode}: Bins = {len(bins)} with {violations} violations and {t} triplets")
 					set_str = setting_str(algo, version, cl, mode)
 					if set_str in results[qos_in]: results[qos_in][set_str].append((len(bins), violations))
 					else: results[qos_in][set_str] = [(len(bins), violations)]
@@ -151,6 +186,15 @@ def calculate_bins(args):
 			for x in results[qos]:
 				name = x if not x.startswith('delphi_a') else 'attackers_r'
 				writer.writerow([name, results[qos][x][0][0], results[qos][x][0][1]])
+
+def arg_check_binpacking(args):
+	if (len(args) < 3) or \
+	   not all(map(lambda x: x in list(alg_config.keys()) + ['all'], args[1].split(','))) or \
+	   (len(args) >= 3 and not args[2] in ['s', 'r']):
+		print(f"Usage:      {args[0]} <algorithm> <simulation>\n" + \
+			  f"Algorithms: {' | '.join(list(alg_config.keys()) + ['all'])}\n" + \
+			  f"Simulation: {' | '.join(['s', 'r'])}")
+		sys.exit(0)
 
 if __name__ == '__main__':
 	calculate_bins(sys.argv)
