@@ -14,7 +14,7 @@ def all_violations_boxplots(args):
 		run_all_algorithms(args[1:])
 	except: pass
 	finally:
-		for slo in map(lambda x: x.split('-')[1].split('.csv')[0], filter(lambda x: 'boxplot' in x, os.listdir(f"{violations_dir}"))):
+		for slo in map(lambda x: x.split('-')[1].split('.csv')[0], filter(lambda x: 'boxplot' in x, os.listdir(f"{violations_dir}1.1/") + os.listdir(f"{violations_dir}1.2/") + os.listdir(f"{violations_dir}all/"))):
 			violations_boxplot(slo)
 
 def violations_boxplot(slo):
@@ -30,7 +30,7 @@ def violations_boxplot(slo):
 			renamed_columns[column] = new_name.strip()
 		return renamed_columns
 
-	with open(f"{violations_dir}boxplot-{slo}.csv", 'r') as violations_file:
+	with open(f"{violations_dir}{slo}/boxplot-{slo}.csv", 'r') as violations_file:
 		df = pd.read_csv(violations_file, delimiter = ',')
 	df = df.rename(columns = column_rename(df.columns))
 	bp = df.boxplot(figsize = (21,15), return_type = 'both', rot = 90, patch_artist=True)

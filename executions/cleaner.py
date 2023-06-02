@@ -54,7 +54,7 @@ def clean(filename):
 	os.rename('output.txt', filename)
 	for vm in hb_completed:
 		if hb_expected[vm] > hb_completed[vm]:
-			print(str(hb_completed[vm]) + '/' + str(hb_expected[vm]) + " executions of VM: " + str(vm) + " (" + filename.split('/')[-1] + ")")
+			pass#print(str(hb_completed[vm]) + '/' + str(hb_expected[vm]) + " executions of VM: " + str(vm) + " (" + filename.split('/')[-1] + ")")
 	if '/' in filename:
 		dir_fn = filename.split('/')
 		(dir_, filename) = ('/'.join(dir_fn[:-1] + ['']), dir_fn[-1])

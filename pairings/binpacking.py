@@ -48,7 +48,8 @@ def execute_group(b):
 		command = f"/home/ypap/delphi/executions/new_exec.sh" + ''.join([f" {name(x)[:-2]} {vcpus(x)}" for x in b])
 		os.system(command)
 	total_measures = parse_files(f"{results_dir}{len(b)}ads/")
-	print(''.join([f"{b[i]}{' ' * (27 - len(b[i]))}{total_measures[f]['vm_mean_perf'][i]:.2f} | " for i in range(len(b))]))
+	try: print(''.join([f"{b[i]}{' ' * (27 - len(b[i]))}{total_measures[f]['vm_mean_perf'][i]:.2f} | " for i in range(len(b))]))
+	except: return 0
 	return sum([int(total_measures[f]['vm_mean_perf'][i] > slo(b[i])) for i in range(len(b))])
 
 def violations_counter(bins, cl, preds, simulation):
@@ -184,7 +185,7 @@ def calculate_bins(args):
 			writer = csv.writer(csvfile)
 			if new_file: writer.writerow(['algo', 'bins', 'violations'])
 			for x in results[qos]:
-				name = x if not x.startswith('delphi_a') else 'attackers_r'
+				name = x if not x.startswith('delphi_a') else 'attackers_r_2_' + x[-1]
 				writer.writerow([name, results[qos][x][0][0], results[qos][x][0][1]])
 
 def arg_check_binpacking(args):
