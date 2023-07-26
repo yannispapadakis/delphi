@@ -41,21 +41,21 @@ def model_library(model_str, gp):
 	if model_str == "MLP":  return MLPClassifier(activation = gp[0], solver = gp[1], alpha = gp[2], learning_rate = gp[3], max_iter = gp[4])
 
 def select_model(model, feature, cl, qos, run):
-	grid_fd = open(results_dir + "GridSearch/" + run + '_'.join([feature, str(cl), str(qos)]) + '.txt', 'r')
-	line = grid_fd.readline()
-	while line:
-		tokens = line.split('\t')
-		if model == tokens[0]:
-			gp = tokens[1:]
-			while tokens[-1] != '\n':
-				line = grid_fd.readline()
-				tokens = line.split('\t')
-			if gp[-1] != '\n':
-				gp = [gp[0].split('(')[0] + '()'] + tokens[1:-2]
-			else:
-				gp = tokens[1:-2]
-			break
+	with open(f"{gridsearch_dir}{run}{'_'.join([feature, str(cl), str(qos)])}.txt", 'r') as grid_fd:
 		line = grid_fd.readline()
+		while line:
+			tokens = line.split('\t')
+			if model == tokens[0]:
+				gp = tokens[1:]
+				while tokens[-1] != '\n':
+					line = grid_fd.readline()
+					tokens = line.split('\t')
+				if gp[-1] != '\n':
+					gp = [gp[0].split('(')[0] + '()'] + tokens[1:-2]
+				else:
+					gp = tokens[1:-2]
+				break
+			line = grid_fd.readline()
 	gp_fixed = []
 	for point in gp:
 		if '.' in point or 'e-' in point: gp_fixed.append(float(point))
@@ -113,9 +113,11 @@ def run_model(answers, feature, cl, qos, model, func):
 	train_data = pd.read_csv(temp_dir + get_data_name(feature, cl, model, qos, func) + '0.csv')
 	test_data = pd.read_csv(temp_dir + get_data_name(feature, cl, model, qos, func) + '1.csv')
 
-	#if feature == 'cont': remove_cols = [0, 2, 3, 4, 5, 6, 8, 15]
-	#if feature == 'sens': remove_cols = [0, 8, 13, 15]
-	remove_cols = [0, 8, 22, 29]
+	#if feature == 'cont': remove_cols = [0, 2, 3, 5, 6, 8, 16, 17, 19, 20, 22, 29]
+	#if feature == 'sens': remove_cols = [0, 2, 3, 8, 16, 17, 22, 29]
+	if feature == 'cont': remove_cols = [0, 2, 3, 4, 5, 6, 8, 15,16,17,18,19,20,21,22,23,24,25,26,27,28,29]
+	if feature == 'sens': remove_cols = [0, 8, 13, 15,16,17,18,19,20,21,22,23,24,25,26,27,28,29]
+	#remove_cols = [0, 8, 22, 29]
 	train = train_data.drop(train_data.columns[remove_cols], axis = 1)
 	test = test_data.drop(test_data.columns[remove_cols], axis = 1)
 
