@@ -129,13 +129,13 @@ def isolation_run(bench, port, tool):
 	tool_pid = execute_perf(tool, vm_ips[host], runtime)
 
 	if "tailbench" in bench[0]:
-		server, client = commands.split(sc_split)
+		server, client = commands[0].split(sc_split)
 		ssh_server = "ssh " + host + " \'" + server + "\' &"
 		ssh_client = "ssh client-1 \'" + client + "\' &"
 		os.system(ssh_server)
 		os.system(ssh_client)
 	else:
-		ssh_command = "ssh " + host + " \'" + commands + "\' &"
+		ssh_command = "ssh " + host + " \'" + commands[0] + "\' &"
 		os.system(ssh_command)
 	pid = ssh_command_pid('client-1' if 'tailbench' in bench[0] else host)
 

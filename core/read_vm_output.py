@@ -92,7 +92,7 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 					elif "tailbench" in bench:
 						tail_name = bench.replace("img-dnn", "imgdnn").split('-')[0].replace("imgdnn", "img-dnn")
 						base_perf = benches_vcpus[tail_name]['p95' if p95 else 'p99'][vcpus]
-						latency = float(output_lines[1].split(' | ')[2 - int(p95)].split()[1])
+						latency = float(output_lines[1].split(' | ')[1 - int(p95)].split()[1])
 						vm_output[vm_seq_num].append(latency)
 						perf = latency / base_perf
 					if perf == 0:
