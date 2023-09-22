@@ -61,6 +61,7 @@ specparsec="$specs","$parsecs"
 tails="img-dnn,masstree,moses,shore,silo,tailbench.sphinx"
 parsectail="$parsecs","$tails"
 specparsectail=$specparsec,$tails
+iperf="iperf3"
 
 benchmarks()
 {
@@ -77,6 +78,8 @@ benchmarks()
 		benches=$specparsectail
 	elif [ "$bench_str" = "parsectail" ]; then
 		benches=$parsectail
+	elif [ "$bench_str" = "iperf" ]; then
+		benches=$iperf
 	fi
 }
 

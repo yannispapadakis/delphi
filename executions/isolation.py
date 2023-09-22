@@ -50,6 +50,13 @@ def get_vm_commands(bench, port, ip, vcpus = 0):
 		udata += client_header % {"suuid": suuid, "port": port, "seq_num": 0}
 		udata += tailbench_client % {"vcpus": vcpus, "ip": ip, "times_to_run": 1, "seq_num": 0,
 									 "bench": bench_name.split('.')[1], "port": port}
+	elif "iperf" in bench_name:
+		udata += iperf_server % {"times_to_run": 1, 'seq_num': 0, 'port': port}
+		udata += vm_footer % {'port': port, "seq_num": 0}
+		udata += sc_split
+		suuid = subprocess.check_output("ssh root@10.0.100." + ip + " 'echo $(basename $(readlink -f /var/lib/cloud/instance))'", shell = True)[:-1]
+		udata += client_header % {"suuid": suuid, "port": port, "seq_num": 0}
+		udata += iperf_client % {"times_to_run": 1, "ip": ip}
 	udata += vm_footer % {"port": port, "seq_num": 0}
 	if vcpus > 0: return (udata, benches_vcpus[bench_name]['runtime_isolation'][vcpus])
 	return udata
@@ -128,7 +135,7 @@ def isolation_run(bench, port, tool):
 	if not tool.startswith('p'): (commands, runtime) = commands
 	tool_pid = execute_perf(tool, vm_ips[host], runtime)
 
-	if "tailbench" in bench[0]:
+	if "tailbench" in bench[0] or "iperf" in bench[0]:
 		server, client = commands[0].split(sc_split)
 		ssh_server = "ssh " + host + " \'" + server + "\' &"
 		ssh_client = "ssh client-1 \'" + client + "\' &"
@@ -137,7 +144,7 @@ def isolation_run(bench, port, tool):
 	else:
 		ssh_command = "ssh " + host + " \'" + commands[0] + "\' &"
 		os.system(ssh_command)
-	pid = ssh_command_pid('client-1' if 'tailbench' in bench[0] else host)
+	pid = ssh_command_pid('client-1' if 'tailbench' in bench[0] or 'iperf' in bench[0] else host)
 
 	wait_for_benchmark(pid)
 	kill_perf(tool, tool_pid)

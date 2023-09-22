@@ -95,6 +95,11 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 						latency = float(output_lines[1].split(' | ')[1 - int(p95)].split()[1])
 						vm_output[vm_seq_num].append(latency)
 						perf = latency / base_perf
+					elif "iperf" in bench:
+						base_perf = benches_vcpus["iperf3"]['bw'][vcpus]
+						latency = float(output_lines[1].split(' | ')[0])
+						vm_output[vm_seq_num].append(latency)
+						perf = base_perf / latency
 					if perf == 0:
 						if vm_seq_num not in excluded:
 							excluded.append(vm_seq_num)
@@ -153,10 +158,12 @@ def mean_perf_calc(vm_perfs, vm_names, vm_event_times, \
 		duration = time_axis[-1] - time_axis[0]
 		duration_mins = duration / 60.0
 		if 'to_completion' in tokens:
-			spec_name = tokens[2 if "tailbench" in name else 3]
+			spec_name = tokens[2 if "tailbench" in name or "iperf" in name else 3]
 			if 'parsec.' in name or "img-dnn" in name: spec_name = tokens[2].replace("imgdnn", "img-dnn")
 			if "tailbench" in spec_name:
 				base_time = benches_vcpus[spec_name]['p95' if p95 else 'p99'][vcpus]
+				vm_mean_perf[vm] = np.mean(vm_perfs[vm])
+			elif "iperf" in spec_name:
 				vm_mean_perf[vm] = np.mean(vm_perfs[vm])
 			else:
 				try:

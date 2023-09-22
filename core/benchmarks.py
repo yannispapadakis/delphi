@@ -89,7 +89,9 @@ benches_vcpus = {
 							 "p99": {1: 0.300, 2: 0.370, 4: 0.384, 8: 0.661}},
 	"tailbench.sphinx":		{"runtime_isolation": {1: 258, 2: 256, 4: 256, 8: 256},
 							 "p95": {1: 1534.068, 2: 1570.260, 4: 1527.874, 8: 1530.911},
-							 "p99": {1: 2071.398, 2: 2161.745, 4: 2387.787, 8: 1958.239}}
+							 "p99": {1: 2071.398, 2: 2161.745, 4: 2387.787, 8: 1958.239}},
+	"iperf3":				{"runtime_isolation": {1: 300},
+							 "bw": {1: 16577350000.0}}
 }
 
 specs = [x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 'spec' in x, benches_vcpus.keys())) for y in vcpus]
@@ -214,3 +216,26 @@ echo "{\\"vm_uuid\\": \\"$SUUID\\", \\"vm_seq_num\\": %(seq_num)d, \\"event\\": 
 \\"bench\\": \\"tailbench.%(bench)s-to-completion\\", \\"vcpus\\": %(vcpus)d, \\"output\\": \\"`cat /tmp/tosend | tr \\"\\n\\" \\";\\" | tr \\"\\\\"\\" \\"^\\"`\\", \\"time\\": \\"`date +%%F.%%T`\\"}" | nc -N 10.0.0.8 %(port)d
 """
 
+iperf_server = \
+"""for t in `seq 0 $((%(times_to_run)d-1))`; do
+{
+	echo "EXECUTION NUMBER $t"
+	sleep 2
+	rm -f output.json
+	iperf3 -s -A 0 -1 --logfile output.json -J; ./iperf_reader.py
+	wait
+} &> /tmp/tosend
+echo "{\\"vm_uuid\\": \\"$VMUUID\\", \\"vm_seq_num\\": %(seq_num)d, \\"event\\": \\"heartbeat\\", \
+\\"bench\\": \\"iperf3-to-completion\\", \\"vcpus\\": 1, \\"output\\": \\"`cat /tmp/tosend | tr \\"\\n\\" \\";\\" | tr \\"\\\\"\\" \\"^\\"`\\", \\"time\\": \\"`date +%%F.%%T`\\"}" | nc -N 10.0.0.8 %(port)d
+done
+"""
+
+iperf_client = \
+"""for t in `seq 0 $((%(times_to_run)d-1))`; do
+{
+	sleep 4
+	iperf3 -c 10.0.100.%(ip)s -t 300
+	wait
+} &> /dev/null
+done
+"""

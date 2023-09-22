@@ -52,6 +52,10 @@ def get_vm_commands(seq_num, vm_chars, port, ip, fill_in = False):
 			udata += sc_split
 			udata += tailbench_client_extra % {"seq_num": seq_num, "vcpus": vcpus, "ip": ip,
 											   "times_to_run": times_to_run, "bench": bench_name.split('.')[1], "port": port}
+		elif "iperf" in bench_name:
+			udata += iperf_server % {"times_to_run": 1, 'seq_num': 0, 'port': port}
+			udata += sc_split
+			udata += iperf_client % {"times_to_run": 1, "ip": ip}
 	else:
 		logger.info("Spawned new VM with seq_num: %d and name: %s", seq_num, vm_name)
 		udata = vm_header % {"seq_num": seq_num, "port": port}
@@ -71,6 +75,13 @@ def get_vm_commands(seq_num, vm_chars, port, ip, fill_in = False):
 			udata += client_header % {"suuid": suuid, "seq_num": seq_num, "port": port}
 			udata += tailbench_client % {"seq_num": seq_num, "vcpus": vcpus, "ip": ip,
 										 "times_to_run": times_to_run, "bench": bench_name.split('.')[1], "port": port}
+		elif "iperf" in bench_name:
+			udata += iperf_server % {"times_to_run": times_to_run, 'seq_num': 0, 'port': port}
+			udata += vm_footer % {'port': port, "seq_num": 0}
+			udata += sc_split
+			suuid = subprocess.check_output("ssh root@10.0.100." + ip + " 'echo $(basename $(readlink -f /var/lib/cloud/instance))'", shell = True)[:-1]
+			udata += client_header % {"suuid": suuid, "port": port, "seq_num": 0}
+			udata += iperf_client % {"times_to_run": times_to_run, "ip": ip}
 		udata += vm_footer % {"seq_num": seq_num, "port": port}
 	return udata
 
@@ -87,7 +98,7 @@ def find_finished_benchmark(pids):
 	while 1:
 		time.sleep(5)
 		for (i, pid) in pids.values():
-			is_alive = len(filter(lambda y: len(y) > 1 and y[1] == pid, map(lambda x: x.split(), subprocess.check_output("ps -ef | grep " + pid, shell = True).split('\n'))))
+			is_alive = len(filter(lambda y: len(y) > 1 and y[1] == pid, map(lambda x: x.split(), subprocess.check_output("ps -ef | grep " + str(pid), shell = True).split('\n'))))
 			if not is_alive:
 				logger.info("======> VM: " + str(i) + " has finished its execution")
 				finished.append(i)
@@ -121,6 +132,13 @@ def kill_tailbench(client):
 		except: continue
 		os.system("ssh " + client + " 'kill -15 " + child_pid + "'")
 
+def kill_iperf(host):
+	ssh_command = "ssh " + host + " 'ps -ef | grep iperf3'"
+	ps_output = subprocess.check_output(ssh_command, shell = True)
+	pids = map(lambda z: z[1], filter(lambda y: len(y) > 8 and 'iperf' in y[7], map(lambda x: x.split(), ps_output.split('\n'))))
+	for p in pids:
+		os.system("ssh " + host + " 'kill -2 " + p + "'")
+
 def verify_empty_host(host):
 	pids = ssh_command_pid(host)
 	while pids != []:
@@ -129,6 +147,7 @@ def verify_empty_host(host):
 		kill_parsec(host)
 		kill_tailbench('client-1')
 		kill_tailbench('client-2')
+		kill_iperf(host)
 		pids = ssh_command_pid(host)
 
 def run_benchmarks(benchmarks, port):
@@ -140,7 +159,7 @@ def run_benchmarks(benchmarks, port):
 		commands = get_vm_commands(i, benchmark, port, vm_ips[host])
 		hosts[i] = host
 		verify_empty_host(host)
-		if "tailbench" in benchmark['bench'][0]:
+		if "tailbench" in benchmark['bench'][0] or 'iperf' in benchmark['bench'][0]:
 			client_vm = "client-" + str(i + 1)
 			verify_empty_host(client_vm)
 			server, client = commands.split(sc_split)
@@ -160,13 +179,13 @@ def run_benchmarks(benchmarks, port):
 		finished = finished[0]
 		host = hosts[finished]
 		extra_command = get_vm_commands(finished, benchmarks[finished], port, vm_ips[host], True)
-		if "tailbench" in benchmarks[finished]['bench'][0]:
+		if "tailbench" in benchmarks[finished]['bench'][0] or 'iperf' in benchmarks[finished]['bench'][0]:
 			extra_command, client = extra_command.split(sc_split)
 			client_vm = hosts[len(benchmarks) + finished]
 			ssh_client = "ssh " + client_vm + " \'" + client + "\' &"
 		ssh_command = "ssh " + host + " \'" + extra_command + "\' &"
 		os.system(ssh_command)
-		if "tailbench" in benchmarks[finished]['bench'][0]:
+		if "tailbench" in benchmarks[finished]['bench'][0] or "iperf" in benchmarks[finished]['bench'][0]:
 			os.system(ssh_client)
 			client_vm = hosts[len(benchmarks) + finished]
 			pids[client_vm] = (finished, ssh_command_pid(client_vm))
@@ -179,7 +198,7 @@ def run_benchmarks(benchmarks, port):
 			extra_fin = extra_fin[0]
 			if extra_fin == finished:
 				os.system(ssh_command)
-				if "tailbench" in benchmarks[finished]['bench'][0]:
+				if "tailbench" in benchmarks[finished]['bench'][0] or 'iperf' in benchmarks[finished]['bench'][0]:
 					os.system(ssh_client)
 					pids[client_vm] = (finished, ssh_command_pid(client_vm))
 				else:
@@ -191,6 +210,8 @@ def run_benchmarks(benchmarks, port):
 					kill_parsec(hosts[finished])
 				elif "tailbench" in benchmarks[finished]['bench'][0]:
 					kill_tailbench(hosts[len(benchmarks) + finished])
+				elif "iperf" in benchmarks[finished]['bench'][0]:
+					kill_iperf(hosts[finished])
 				break
 	logger.info("Both VMs finished")
 
