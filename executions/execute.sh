@@ -23,6 +23,7 @@ run_isolation()
 		output_file=${vm}_${vcpus}-${tool}.txt
 		./isolation.py ${vm} ${vcpus} ${tool} &> ../results/${output_file}
 	done
+	rm ../results/internal.txt
 	openstack server stop vm1-${vcpus}
 }
 
