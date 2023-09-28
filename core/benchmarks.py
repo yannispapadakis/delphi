@@ -29,7 +29,7 @@ models = ['LR', 'SGD', 'PA', 'PER', 'RID', 'LDA', 'QDA', 'SVC', \
 chosen_models = ['ET', 'RF', 'GB', 'MLP']
 
 p95 = False
-excluded_benchmarks = ['shore-1', 'masstree-8']
+excluded_benchmarks = ['shore-1', 'masstree-8', 'iperf3-2', 'iperf3-4', 'iperf3-8']
 
 benches_vcpus = {
 	"spec-400.perlbench":	{"runtime_isolation": {1: 193.0, 2: 195.0, 4: 199.0, 8: 210.25}},
@@ -99,7 +99,8 @@ parsecs = [x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 
 tails = list(filter(lambda x: x not in excluded_benchmarks,
 			[x + '-' + y for x in map(lambda x: x.split('.')[1], filter(lambda x: 'tailbench' in x, benches_vcpus.keys())) for y in vcpus]))
 tails = list(map(lambda x: x if 'sphinx' not in x else 'tailbench.' + x, tails))
-benchmark_suites = {'s': specs, 'p': parsecs, 't': tails}
+iperf = ['iperf3']
+benchmark_suites = {'s': specs, 'p': parsecs, 't': tails, 'i': iperf}
 
 ##################### Execution configs ##################### 
 ## Setup the logging facility

@@ -99,7 +99,7 @@ def read_file(filename, vm_output, vm_perfs, vm_event_times, vms_boot_time, gold
 						base_perf = benches_vcpus["iperf3"]['bw'][vcpus]
 						latency = float(output_lines[1].split(' | ')[0])
 						vm_output[vm_seq_num].append(latency)
-						perf = base_perf / latency
+						perf = float(base_perf) / latency
 					if perf == 0:
 						if vm_seq_num not in excluded:
 							excluded.append(vm_seq_num)

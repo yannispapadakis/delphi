@@ -38,11 +38,13 @@ def fill_missing(heatmap, dirs):
 			measures = total_measures[f]
 			(name_0, name_1) = (measures['vms_names'][0], measures['vms_names'][1])
 			name_0 = name_0.replace('img-dnn', 'imgdnn')
-			name_0 = name_0.split('-')[3] if 'parsec' in name_0 else name_0.split('-')[2 + int('spec' in name_0)].split('.')[1]
+			if 'iperf' in name_0: name_0 = name_0.split('-')[2]
+			else: name_0 = name_0.split('-')[3] if 'parsec' in name_0 else name_0.split('-')[2 + int('spec' in name_0)].split('.')[1]
 			name_0 = name_0.replace('imgdnn', 'img-dnn')
 			if name_0 == "sphinx": name_0 = 'tailbench.' + name_0
 			name_1 = name_1.replace('img-dnn', 'imgdnn')
-			name_1 = name_1.split('-')[3] if 'parsec' in name_1 else name_1.split('-')[2 + int('spec' in name_1)].split('.')[1]
+			if 'iperf' in name_1: name_1 = name_1.split('-')[2]
+			else: name_1 = name_1.split('-')[3] if 'parsec' in name_1 else name_1.split('-')[2 + int('spec' in name_1)].split('.')[1]
 			name_1 = name_1.replace('imgdnn', 'img-dnn')
 			if name_1 == "sphinx": name_1 = 'tailbench.' + name_1
 			(vcpus_0, vcpus_1) = (str(measures['vms_vcpus'][0]), str(measures['vms_vcpus'][1]))

@@ -37,8 +37,7 @@ def read_perf_file(filename, directory, run_periods, version = ''):
 				continue
 			if tokens[0] == '#' or '<not' in tokens or 'counted>' in tokens:
 				if tokens[1] == 'started':
-					start_t = datetime.datetime.strptime(' '.join(tokens[4:]), "%b %d %H:%M:%S %Y") - datetime.timedelta(hours=2)
-					start_t += datetime.timedelta(hours= 2 * int(filename.startswith('4')) - 1 * int(filename.startswith('tailbench')))
+					start_t = datetime.datetime.strptime(' '.join(tokens[4:]), "%b %d %H:%M:%S %Y") - datetime.timedelta(hours = 3)
 					start_t = int(start_t.strftime("%s"))
 				line = perf_f.readline()
 				continue
@@ -49,12 +48,9 @@ def read_perf_file(filename, directory, run_periods, version = ''):
 					continue
 			event = tokens[2]
 			value = int(tokens[1])
-			if event in measures:
-				measures[event].append(value)
-			else:
-				measures[event] = [value]
+			if event in measures: measures[event].append(value)
+			else: measures[event] = [value]
 			line = perf_f.readline()
-		perf_f.close()
 	if 'instructions' in measures and 'cycles' in measures and version == '':
 		measures['ipc_perf'] = map(lambda x: float(x[0]) / x[1] if x[1] > 0 else 0, 
 							  list(zip(measures['instructions'], measures['cycles'])))
@@ -104,24 +100,25 @@ def attach_pqos(all_measures):
 	for pqos_file in list(filter(lambda x: x.endswith('csv'), pqos_files)):
 		if pqos_file.split('.')[1] in excluded_benchmarks: continue
 		bs = ae = alll = 0
-		pqos_f = open(isolation_dir + 'pqos/raw_measures/' + pqos_file, 'r')
-		rd = csv.reader(pqos_f)
-		pqos_measures = dict()
-		for row in rd:
-			if row[0] == 'Time':
-				events = list(map(lambda x: x.lower(), row[2:]))
-				for event in events:
-					pqos_measures[event] = []
-			else:
-				time = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") - datetime.timedelta(hours=3 if 'tailbench' in pqos_file else 2)
-				time = int(time.strftime("%s"))
-				if time < run_periods[pqos_file.split('.')[1]][0] or time > run_periods[pqos_file.split('.')[1]][1]:
-					continue
-				measure = row[2:]
-				for (i, event) in list(enumerate(events)):
-					pqos_measures[event].append(float(measure[i]))
+		with open(isolation_dir + 'pqos/raw_measures/' + pqos_file, 'r') as pqos_f:
+			rd = csv.reader(pqos_f)
+			pqos_measures = dict()
+			for row in rd:
+				if row[0] == 'Time':
+					events = list(map(lambda x: x.lower(), row[2:]))
+					for event in events:
+						pqos_measures[event] = []
+				else:
+					time = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") - datetime.timedelta(hours=3 if 'tailbench' in pqos_file or 'iperf' in pqos_file else 2)
+					time = int(time.strftime("%s"))
+					if time < run_periods[pqos_file.split('.')[int(not 'iperf' in pqos_file)]][0] or time > run_periods[pqos_file.split('.')[int(not 'iperf' in pqos_file)]][1]:
+						continue
+					measure = row[2:]
+
+					for (i, event) in list(enumerate(events)):
+						pqos_measures[event].append(float(measure[i]))
 		for event in pqos_measures:
-			name = pqos_file.split('.csv')[0] if "sphinx-" in pqos_file else pqos_file.split('.')[1]
+			name = pqos_file.split('.csv')[0] if "sphinx-" in pqos_file or "iperf" in pqos_file else pqos_file.split('.')[1]
 			all_measures[name][event] = pqos_measures[event]
 
 ############################################# Main ################################################
@@ -167,11 +164,11 @@ def perf_files(tool = 'pqos'):
 			run_periods = time_cleanup(tool + ('' if version == '' else '-' + version))
 			for f in list(filter(lambda x: x.endswith('csv'), files)):
 				if f.split('.')[1] in excluded_benchmarks: continue
-				period = run_periods[f.split('.')[1]] if f.split('.')[1] in run_periods else []
+				period = run_periods[f.split('.')[int(not 'iperf' in f)]] if f.split('.')[int(not 'iperf' in f)] in run_periods else []
 				measures = read_perf_file(f, directory, period, version)
-				if final_title == []: final_title = measures.keys()
-				elif final_title != measures.keys(): print("Title error on:", f)
-				name = f.split('.csv')[0] if 'sphinx-' in f else f.split('.')[1]
+				if final_title == []: final_title = list(measures.keys())
+				elif final_title != list(measures.keys()): print("Title error on:", f)
+				name = f.split('.csv')[0] if 'sphinx-' in f or 'iperf' in f else f.split('.')[1]
 				all_measures[name] = measures
 			if version == '':
 				attach_pqos(all_measures)
