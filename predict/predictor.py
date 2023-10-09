@@ -13,6 +13,7 @@ def prediction(args):
 		if train == 's': trained_with = 'spec/'
 		elif train == 's,p': trained_with = 'spec-parsec/'
 		elif train == 's,p,t': trained_with = 'spec-parsec-tail/'
+		elif train == 's,p,t,i': trained_with = 'spec-parsec-tail-iperf/'
 		else:
 			print(f"Models have not been trained with {train} yet")
 			return
