@@ -113,15 +113,18 @@ def run_model(answers, feature, cl, qos, model, func):
 	train_data = pd.read_csv(temp_dir + get_data_name(feature, cl, model, qos, func) + '0.csv')
 	test_data = pd.read_csv(temp_dir + get_data_name(feature, cl, model, qos, func) + '1.csv')
 
-	#if feature == 'cont': remove_cols = [0, 2, 3, 5, 6, 8, 16, 17, 19, 20, 22, 29]
-	#if feature == 'sens': remove_cols = [0, 2, 3, 8, 16, 17, 22, 29]
-	if feature == 'cont': remove_cols = [0, 2, 3, 4, 5, 6, 8, 15,16,17,18,19,20,21,22,23,24,25,26,27,28,29]
-	if feature == 'sens': remove_cols = [0, 8, 13, 15,16,17,18,19,20,21,22,23,24,25,26,27,28,29]
+	if feature == 'cont': remove_cols = [0, 2, 3, 5, 6, 8, 16, 17, 19, 20, 22, 29]
+	if feature == 'sens': remove_cols = [0, 2, 3, 8, 16, 17, 22, 29]
+#	if feature == 'cont': remove_cols = [0, 2, 3, 4, 5, 6, 8, 15,16,17,18,19,20,21,22,23,24,25,26,27,28,29]
+#	if feature == 'sens': remove_cols = [0, 8, 13, 15,16,17,18,19,20,21,22,23,24,25,26,27,28,29]
 	#remove_cols = [0, 8, 22, 29]
 	train = train_data.drop(train_data.columns[remove_cols], axis = 1)
 	test = test_data.drop(test_data.columns[remove_cols], axis = 1)
 
-	scaler = preprocessing.StandardScaler().fit(train)
+	try:
+		scaler = preprocessing.StandardScaler().fit(train)
+	except:
+		return []
 
 	train_names = train_data['Benchmark']
 	test_names = test_data['Benchmark']
@@ -142,7 +145,8 @@ def run_model(answers, feature, cl, qos, model, func):
 
 	for i in range(len(test_names)):
 		answers[test_names[i]] = (test_pred[i], y_test[i])
-	return acc_score
+	metrics_ = metrics.classification_report(y_test, test_pred, digits = 4, zero_division = 0, output_dict = True)
+	return (metrics_['accuracy'], metrics_['macro avg']['f1-score'])
 
 def get_train_test(train, test = ''):
 	train = [x for sublist in list(map(lambda x: benchmark_suites[x], train.split(','))) for x in sublist]
